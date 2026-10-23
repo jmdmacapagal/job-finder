@@ -13,6 +13,10 @@ Built with Next.js 15 (App Router), TypeScript, Tailwind CSS 4 and Supabase (Pos
 - Openings page: fit score and reason, work mode, salary, whether the listing has an email to apply to, and a Dismiss button
 - Settings page: your master CV and the job searches the agent runs
 
+## Documentation
+
+See [`docs/`](docs/README.md) for the architecture, authentication, data model, the job-finding agent, operations and the decision log.
+
 ## Setup
 
 1. Create a free project at [supabase.com](https://supabase.com).
