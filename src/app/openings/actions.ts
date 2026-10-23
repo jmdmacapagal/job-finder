@@ -29,11 +29,6 @@ export async function dismissOpening(id: string) {
   revalidatePath("/openings");
 }
 
-export async function setSelected(id: string, selected: boolean) {
-  const supabase = await createClient();
-  await supabase.from("job_openings").update({ selected }).eq("id", id);
-  revalidatePath("/openings");
-}
 
 export type ApplyState = { summary?: ApplySummary; error?: string } | null;
 
@@ -54,8 +49,9 @@ export async function applySelected(): Promise<ApplyState> {
   }
 }
 
+// No revalidatePath: the page already shows the tick, and re-rendering it would make ticking feel slow.
 export async function setSelectedMany(ids: string[], selected: boolean) {
   const supabase = await createClient();
-  await supabase.from("job_openings").update({ selected }).in("id", ids);
-  revalidatePath("/openings");
+  const { error } = await supabase.from("job_openings").update({ selected }).in("id", ids);
+  if (error) throw new Error(error.message);
 }

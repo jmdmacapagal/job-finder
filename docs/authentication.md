@@ -52,10 +52,10 @@ Supabase lets anyone sign up by default. The allow-list check in the login actio
 `src/middleware.ts` runs on every request except static assets. It:
 
 1. Creates a Supabase server client bound to the request cookies.
-2. Calls `supabase.auth.getUser()`. This validates the access token with Supabase and refreshes it when it's close to expiring. New cookies are written to the response.
+2. Calls `supabase.auth.getClaims()`. This verifies the access token's signature and refreshes it when it's close to expiring. New cookies are written to the response. With Supabase's asymmetric JWT signing keys the check happens locally, with no round trip to Supabase Auth. With the legacy shared secret it asks Supabase Auth, like `getUser()`.
 3. Redirects to `/login` when there's no user and the path isn't public.
 
-It uses `getUser()` rather than `getSession()` because `getUser()` checks the token with Supabase instead of trusting the cookie contents.
+It uses `getClaims()` rather than `getSession()` because `getClaims()` verifies the token's signature instead of trusting the cookie contents. Server actions that need the user's id still call `getUser()`.
 
 Server Components and Server Actions use `createClient()` from `src/lib/supabase/server.ts`. Cookies are read-only in Server Components, so its `setAll` swallows errors there. The middleware has already refreshed the session by then.
 

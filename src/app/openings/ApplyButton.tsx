@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { applySelected, type ApplyState } from "./actions";
+import { useSelectionCounts } from "./Selection";
 
-export function ApplyButton({ selected, byEmail }: { selected: number; byEmail: number }) {
+export function ApplyButton() {
+  const { selected, byEmail } = useSelectionCounts();
   const [state, action, pending] = useActionState<ApplyState>(applySelected, null);
   const onSite = selected - byEmail;
 

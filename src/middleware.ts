@@ -25,12 +25,13 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims checks the session token locally when the project uses asymmetric
+  // signing keys, so most requests skip a round trip to Supabase Auth.
+  // It also refreshes an expired session, like getUser.
+  const { data } = await supabase.auth.getClaims();
 
   const isPublic = PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
-  if (!user && !isPublic) {
+  if (!data?.claims && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
