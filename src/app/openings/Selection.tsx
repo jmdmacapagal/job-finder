@@ -96,7 +96,8 @@ export function SelectCheckbox({ id, label }: { id: string; label: string }) {
 export function SelectAllCheckbox() {
   const { isSelected, set, pageIds } = useSelection();
   return (
-    <label className="ml-auto flex w-fit cursor-pointer items-center gap-2 px-4 text-sm text-muted select-none">
+    // h-9 matches the Apply button's height so the two line up.
+    <label className="flex h-9 cursor-pointer items-center gap-2 px-4 text-sm text-muted select-none">
       Select all on this page
       <input
         type="checkbox"

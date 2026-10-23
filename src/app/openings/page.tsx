@@ -83,10 +83,7 @@ export default async function OpeningsPage({
               The agent checks for new matches every morning. Select the jobs you want, then apply in one go.
             </p>
           </div>
-          <div className="flex flex-wrap items-start gap-3">
-            <ApplyButton />
-            <FindJobsButton />
-          </div>
+          <FindJobsButton />
         </div>
 
         <nav className="flex gap-2 text-sm">
@@ -118,7 +115,10 @@ export default async function OpeningsPage({
           </div>
         ) : (
           <div className="space-y-2">
-            <SelectAllCheckbox />
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <ApplyButton />
+              <SelectAllCheckbox />
+            </div>
             <ul className="space-y-2">
               {openings.map((job) => (
                 <SelectableCard key={job.id} id={job.id}>

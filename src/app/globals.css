@@ -57,6 +57,10 @@ body {
   .btn-primary {
     @apply inline-flex items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50;
   }
+  /* For the agent's main actions: finding jobs and applying. */
+  .btn-success {
+    @apply inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50;
+  }
   .btn-secondary {
     @apply inline-flex items-center justify-center rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-background;
   }

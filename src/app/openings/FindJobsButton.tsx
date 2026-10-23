@@ -9,7 +9,7 @@ export function FindJobsButton() {
   return (
     <div className="space-y-2">
       <form action={action}>
-        <button type="submit" disabled={pending} className="btn-primary">
+        <button type="submit" disabled={pending} className="btn-success">
           {pending ? "Searching… (up to a few minutes)" : "Find jobs now"}
         </button>
       </form>

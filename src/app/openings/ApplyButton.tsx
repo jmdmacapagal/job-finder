@@ -13,7 +13,7 @@ export function ApplyButton() {
   return (
     <div className="space-y-2">
       <form action={action}>
-        <button type="submit" disabled={pending || selected === 0} className="btn-primary">
+        <button type="submit" disabled={pending || selected === 0} className="btn-success">
           {pending ? "Writing applications… (a few minutes)" : `Apply to selected (${selected})`}
         </button>
       </form>
