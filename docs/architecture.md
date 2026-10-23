@@ -25,7 +25,7 @@ src/
     layout.tsx             Header and navigation
     page.tsx               Applications dashboard: stats, status filters, list
     applications/          Add, edit and delete forms, the tailored email and CV, and /applications/<id>/cv (PDF)
-    openings/              Openings list (Good matches / Below 40% tabs), Select checkboxes, "Apply to selected", "Find jobs now", Dismiss
+    openings/              Openings list (Good matches / Below 40% tabs), checkboxes and Select all, "Apply to selected", "Find jobs now", Dismiss
     settings/              Master CV and search queries
     login/                 Magic-link sign-in form and server action
     auth/callback/         Swaps the emailed code for a session

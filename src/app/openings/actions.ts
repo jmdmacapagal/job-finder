@@ -53,3 +53,9 @@ export async function applySelected(): Promise<ApplyState> {
     return { error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+export async function setSelectedMany(ids: string[], selected: boolean) {
+  const supabase = await createClient();
+  await supabase.from("job_openings").update({ selected }).in("id", ids);
+  revalidatePath("/openings");
+}

@@ -14,7 +14,7 @@ flowchart LR
   S --> A2[Application row: Saved]
 ```
 
-1. Each opening has a Select checkbox. Ticking it sets `job_openings.selected`.
+1. Each opening has a checkbox, and "Select all on this page" ticks the whole page. Ticking one sets `job_openings.selected`.
 2. **Apply to selected** runs `applyToSelected` (`src/lib/apply/run.ts`) for up to 10 selected jobs, five at a time. If more are selected, press it again.
 3. For each job, Claude (`src/lib/apply/tailor.ts`) returns a subject line, a cover email and a tailored CV in Markdown.
 4. If the listing had an email address (`apply_email`), the CV is rendered to a PDF (`src/lib/apply/pdf.ts`) and sent from your Gmail (`src/lib/apply/gmail.ts`). You're BCC'd, so the sent application lands in your inbox too.

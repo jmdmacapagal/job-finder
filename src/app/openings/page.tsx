@@ -7,7 +7,7 @@ import { EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS, type JobOpening } from "@/lib
 import { dismissOpening } from "./actions";
 import { ApplyButton } from "./ApplyButton";
 import { FindJobsButton } from "./FindJobsButton";
-import { SelectCheckbox } from "./SelectCheckbox";
+import { SelectAllCheckbox, SelectCheckbox } from "./SelectCheckbox";
 
 // "Find jobs now" and "Apply to selected" call Claude, which can take a while.
 export const maxDuration = 300;
@@ -87,44 +87,47 @@ export default async function OpeningsPage({
             : "No openings yet. Add your CV in Settings, then press \"Find jobs now\"."}
         </div>
       ) : (
-        <ul className="space-y-2">
-          {openings.map((job) => (
-            <li key={job.id} className={`card p-4 ${job.selected ? "ring-2 ring-accent" : ""}`}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <a href={job.url} target="_blank" rel="noreferrer" className="font-medium hover:text-accent">
-                    {job.title}
-                  </a>
-                  <p className="text-sm text-muted">
-                    {job.company}
-                    {job.work_mode && ` · ${WORK_MODE_LABELS[job.work_mode]}`}
-                    {job.location && ` · ${job.location}`}
-                  </p>
+        <div className="space-y-2">
+          <SelectAllCheckbox ids={openings.map((j) => j.id)} allSelected={openings.every((j) => j.selected)} />
+          <ul className="space-y-2">
+            {openings.map((job) => (
+              <li key={job.id} className={`card p-4 ${job.selected ? "ring-2 ring-accent" : ""}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <a href={job.url} target="_blank" rel="noreferrer" className="font-medium hover:text-accent">
+                      {job.title}
+                    </a>
+                    <p className="text-sm text-muted">
+                      {job.company}
+                      {job.work_mode && ` · ${WORK_MODE_LABELS[job.work_mode]}`}
+                      {job.location && ` · ${job.location}`}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    {job.fit_score !== null && (
+                      <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent">
+                        {job.fit_score}% fit
+                      </span>
+                    )}
+                    <SelectCheckbox id={job.id} selected={job.selected} label={`Select ${job.title} at ${job.company}`} />
+                  </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  {job.fit_score !== null && (
-                    <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent">
-                      {job.fit_score}% fit
-                    </span>
-                  )}
-                  <SelectCheckbox id={job.id} selected={job.selected} />
+                {job.fit_reason && <p className="mt-2 text-sm">{job.fit_reason}</p>}
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+                  <span>via {job.source}</span>
+                  {job.employment_type && <span>{EMPLOYMENT_TYPE_LABELS[job.employment_type]}</span>}
+                  {job.salary && <span>{job.salary}</span>}
+                  {job.apply_email ? <span className="text-green-600">Can apply by email</span> : <span>Apply on site</span>}
+                  <form action={dismissOpening.bind(null, job.id)} className="ml-auto">
+                    <button type="submit" className="hover:text-foreground">
+                      Dismiss
+                    </button>
+                  </form>
                 </div>
-              </div>
-              {job.fit_reason && <p className="mt-2 text-sm">{job.fit_reason}</p>}
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-                <span>via {job.source}</span>
-                {job.employment_type && <span>{EMPLOYMENT_TYPE_LABELS[job.employment_type]}</span>}
-                {job.salary && <span>{job.salary}</span>}
-                {job.apply_email ? <span className="text-green-600">Can apply by email</span> : <span>Apply on site</span>}
-                <form action={dismissOpening.bind(null, job.id)} className="ml-auto">
-                  <button type="submit" className="hover:text-foreground">
-                    Dismiss
-                  </button>
-                </form>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <Pagination page={page} totalPages={pages} total={total} hrefFor={hrefFor} />
