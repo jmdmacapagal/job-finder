@@ -101,3 +101,6 @@ The "Find jobs now" button doesn't need the service-role key. It runs as the sig
 | `CRON_SECRET` | Cron route only | **No** |
 | `ALLOWED_EMAILS` | Login action, middleware, cron | Server-only |
 | `GMAIL_APP_PASSWORD` | Apply action only | **No.** It can send mail as you. Revoke it at myaccount.google.com/apppasswords if it leaks. |
+| `CREDENTIALS_KEY` | Settings and Apply actions | **No.** With it and a database copy, someone could decrypt every saved Gmail app password. |
+
+Users' Gmail app passwords are encrypted with AES-256-GCM before they're saved to `profiles`. The Settings page only learns whether one is saved, never the value, and RLS keeps each row private to its user.

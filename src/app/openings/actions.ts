@@ -40,9 +40,7 @@ export async function applySelected(): Promise<ApplyState> {
   if (!user) return { error: "You're signed out." };
 
   try {
-    // The Gmail in GMAIL_USER belongs to one person, so only they can send through it.
-    const ownsGmail = user.email?.toLowerCase() === process.env.GMAIL_USER?.trim().toLowerCase();
-    const summary = await applyToSelected(supabase, user.id, ownsGmail ? {} : { send: null });
+    const summary = await applyToSelected(supabase, user.id, { userEmail: user.email });
     revalidatePath("/openings");
     revalidatePath("/");
     return { summary };

@@ -16,15 +16,15 @@ Copy `.env.example` to `.env.local` for local development. Add the same values t
 | `JSEARCH_HOST`, `JSEARCH_PATH` | No | JSearch | Only if RapidAPI changes them. Defaults: `jsearch.p.rapidapi.com`, `/search-v2` |
 | `SUPABASE_SERVICE_ROLE_KEY` | For the cron job | Cron | Supabase → API Keys → secret key (or the legacy service_role key). **Never expose it.** |
 | `CRON_SECRET` | For the cron job | Cron | Any long random string |
-| `GMAIL_USER` | To apply by email | Apply | Your Gmail address |
-| `GMAIL_APP_PASSWORD` | To apply by email | Apply | myaccount.google.com/apppasswords (needs 2-Step Verification on). **Never expose it.** |
-| `GMAIL_FROM_NAME` | No | Apply | The sender name recipients see, for example your full name |
+| `CREDENTIALS_KEY` | To apply by email | Settings, Apply | `openssl rand -base64 32`. Encrypts each user's Gmail app password. **Never expose it, and don't change it** or saved passwords stop working (users would re-enter them). |
+| `GMAIL_USER`, `GMAIL_APP_PASSWORD` | No | Apply | The owner's Gmail from the environment, used only when their sign-in email matches `GMAIL_USER` and they haven't saved one in Settings |
+| `GMAIL_FROM_NAME` | No | Apply | Sender name for the environment account. Otherwise the name on the CV is used. |
 | `TAILOR_MODEL` | No | Apply | Defaults to `claude-opus-5-5`. `claude-sonnet-5-5` halves the cost. |
 
 ## Local setup
 
 1. Create a Supabase project.
-2. Run the files in `supabase/migrations/` in order (`0001`, `0002`, `0003`) in the SQL Editor.
+2. Run the files in `supabase/migrations/` in order (`0001` to `0004`) in the SQL Editor.
 3. In Supabase → Authentication → URL Configuration, add `http://localhost:3000/auth/callback` to the redirect URLs.
 4. Fill in `.env.local`, then run `npm install` and `npm run dev`.
 5. Sign in, paste your CV in **Settings**, and press **Find jobs now** on **Openings**.
@@ -65,4 +65,6 @@ GitHub Actions (`.github/workflows/ci.yml`) runs all four on every PR and on eve
 | Same results every run | Already-scored jobs are skipped by design, so new results depend on new listings. Add searches in Settings for more variety. |
 | Sign-in link doesn't come back to the app | The callback URL is missing from Supabase's redirect URLs. |
 | "Could not find the 'applied_at' column" or similar | Run `0003_apply.sql`. |
+| "Could not find the 'work_preferences' column" or similar | Run `0004_friends.sql`. |
+| `CREDENTIALS_KEY is not set` when saving Settings | Add the key (see above) and restart or redeploy. |
 | Gmail says `Invalid login` | Use an app password, not your Google password, and turn on 2-Step Verification first. |
