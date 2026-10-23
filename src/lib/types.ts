@@ -44,8 +44,12 @@ export type JobOpening = {
   location: string | null;
   work_mode: WorkMode | null;
   employment_type: EmploymentType | null;
+  salary: string | null;
+  apply_email: string | null;
   fit_score: number | null;
   fit_reason: string | null;
+  posted_at: string | null;
+  selected: boolean;
   discovered_at: string;
 };
 
