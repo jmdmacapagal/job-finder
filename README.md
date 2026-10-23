@@ -6,7 +6,7 @@ Built with Next.js 15 (App Router), TypeScript, Tailwind CSS 4 and Supabase (Pos
 
 ## What works now
 
-- Sign in with an emailed sign-in link (only `ALLOWED_EMAIL` can sign in)
+- Sign in with an emailed sign-in link (only emails in `ALLOWED_EMAILS` can sign in)
 - Applications dashboard: totals, active count, response rate, filters by status
 - Add, edit and delete applications: company, role, link, source, work mode, type, location, salary, status, date, feedback, notes
 - **Job-finding agent**: every morning (and on "Find jobs now") it pulls listings from Remotive, RemoteOK and JSearch (Google for Jobs, which includes LinkedIn and Indeed), skips ones you've already seen, scores each against your CV with Claude, and saves matches scoring 40+ to Openings

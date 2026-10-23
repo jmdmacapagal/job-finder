@@ -3,7 +3,7 @@
 ## Summary
 
 - **Passwordless sign-in.** Supabase sends a magic link by email.
-- **Single owner.** Only the address in `ALLOWED_EMAIL` can request a link.
+- **Invite-only.** Only addresses in `ALLOWED_EMAILS` can request a link, and the middleware rejects any session whose email isn't on the list.
 - **Sessions live in cookies** and are managed by `@supabase/ssr`. The middleware refreshes them on every request.
 - **Every page is private** except `/login`, `/auth/*` and `/api/cron/*`.
 - **Data isolation is enforced in Postgres** with row-level security (RLS), not just in app code.
@@ -43,9 +43,17 @@ sequenceDiagram
 - Supabase handles email delivery, token expiry and rate limiting.
 - One user signing in on a few devices doesn't need anything heavier.
 
-### Why `ALLOWED_EMAIL`
+### Why `ALLOWED_EMAILS`
 
-Supabase lets anyone sign up by default. The allow-list check in the login action stops strangers from creating accounts. For extra safety, you can also turn off "Allow new users to sign up" in Supabase → Authentication → Providers → Email once your own account exists.
+Supabase lets anyone sign up by default, and the anon key is public (it's in the browser), so a stranger can create an account by calling Supabase directly, without the login page. The list is checked in three places:
+
+1. **Login action:** only listed emails get a sign-in link.
+2. **Middleware:** a session whose email isn't listed is signed out and sent to `/login`. This also covers server actions, so a stranger can't run the agent on your API keys.
+3. **Cron:** only listed accounts are searched for.
+
+If the variable is empty, nobody gets in. The older single `ALLOWED_EMAIL` still works.
+
+For extra safety, turn off "Allow new users to sign up" in Supabase → Authentication → Sign In / Providers once everyone has signed in once. Existing users can still sign in.
 
 ## Sessions and middleware
 
@@ -91,5 +99,5 @@ The "Find jobs now" button doesn't need the service-role key. It runs as the sig
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` (publishable) | Everywhere | Yes, because RLS protects data |
 | `SUPABASE_SERVICE_ROLE_KEY` (secret) | Cron route only | **No** |
 | `CRON_SECRET` | Cron route only | **No** |
-| `ALLOWED_EMAIL` | Login action | Server-only |
+| `ALLOWED_EMAILS` | Login action, middleware, cron | Server-only |
 | `GMAIL_APP_PASSWORD` | Apply action only | **No.** It can send mail as you. Revoke it at myaccount.google.com/apppasswords if it leaks. |

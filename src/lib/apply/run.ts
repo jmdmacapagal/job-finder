@@ -18,7 +18,8 @@ export type ApplySummary = {
 
 type Deps = {
   tailor?: (cv: string, listing: ListingForTailoring) => Promise<Tailored>;
-  send?: SendEmail;
+  /** null turns sending off, for users who don't own the configured Gmail account. */
+  send?: SendEmail | null;
   today?: () => string;
 };
 
@@ -76,8 +77,8 @@ export async function applyToSelected(supabase: SupabaseClient, userId: string, 
 
   const anthropic = deps.tailor ? null : new Anthropic();
   const tailor = deps.tailor ?? ((c: string, l: ListingForTailoring) => tailorApplication(anthropic!, c, l));
-  let send = deps.send;
-  if (!send && gmailConfigured()) send = createGmailSender();
+  let send = deps.send ?? undefined;
+  if (deps.send === undefined && gmailConfigured()) send = createGmailSender();
   const today = deps.today ?? (() => new Date().toISOString().slice(0, 10));
 
   const summary: ApplySummary = { emailed: [], prepared: [], remaining: Math.max(0, (count ?? 0) - openings.length), errors: [] };
@@ -86,7 +87,7 @@ export async function applyToSelected(supabase: SupabaseClient, userId: string, 
     const label = `${job.title} at ${job.company}`;
     try {
       if (job.apply_email && !send) {
-        throw new Error("this one applies by email, but GMAIL_USER and GMAIL_APP_PASSWORD aren't set");
+        throw new Error("this one applies by email, but sending email isn't set up for your account");
       }
       const tailored = await tailor(cv, job);
 

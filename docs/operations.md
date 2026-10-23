@@ -8,7 +8,7 @@ Copy `.env.example` to `.env.local` for local development. Add the same values t
 | --- | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Everything | Supabase → Project Settings → Data API, or the Connect button |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Everything | Supabase → Project Settings → API Keys → publishable key (or the legacy anon key) |
-| `ALLOWED_EMAIL` | Yes | Login | Your email |
+| `ALLOWED_EMAILS` | Yes | Login, middleware, cron | Comma-separated emails that can sign in. The older `ALLOWED_EMAIL` still works. |
 | `NEXT_PUBLIC_SITE_URL` | Recommended | Login redirect fallback | `http://localhost:3000` locally, or your deployed URL |
 | `ANTHROPIC_API_KEY` | For the agent | Scoring | console.anthropic.com → API Keys |
 | `ANTHROPIC_MODEL` | No | Scoring | Defaults to `claude-haiku-5-5` |

@@ -23,6 +23,8 @@ A running log of decisions and the reasoning behind them. Newest at the bottom.
 | 2026-10-23 | **Tech-stack pills and salary come from keyword matching, not Claude** | It's free, instant, and works on listings already saved. Pills for tech that's also on your CV are highlighted. Salary falls back to the first pay figure in the description when the source gives none. |
 | 2026-10-23 | **Ticking a job updates in the browser first** | Re-rendering the page on every tick took about 2 seconds. The tick, the card outline and the Apply count now update instantly, and the change is saved in the background. |
 | 2026-10-23 | **Middleware uses `getClaims()`** | It verifies the session locally with asymmetric signing keys, saving a Supabase Auth round trip on every page load. |
+| 2026-10-23 | **Invite list instead of a single owner (`ALLOWED_EMAILS`)** | The owner plans to share the app with 5–10 friends. The list is enforced in middleware too, because the public anon key lets anyone create a Supabase account directly. |
+| 2026-10-23 | **Only the `GMAIL_USER` account can send applications** | The Gmail credentials belong to one person. Other users' email-apply jobs fail with a clear message until per-user email sending exists. |
 
 ## Planned
 

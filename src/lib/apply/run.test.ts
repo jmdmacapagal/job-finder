@@ -80,7 +80,7 @@ describe("applyToSelected", () => {
   it("leaves an email listing selected when Gmail isn't set up", async () => {
     const db = fakeSupabase([opening({ apply_email: "jobs@acme.test" })]);
     const summary = await applyToSelected(db.client, "u1", { tailor });
-    expect(summary.errors[0]).toMatch(/GMAIL_USER/);
+    expect(summary.errors[0]).toMatch(/sending email isn't set up/);
     expect(db.inserted).toEqual([]);
     expect(db.updated).toEqual([]);
   });
