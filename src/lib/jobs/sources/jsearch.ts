@@ -76,7 +76,7 @@ export async function fetchJSearch(
 ): Promise<RawJob[]> {
   // RapidAPI routes by host, which must match the one shown in your RapidAPI code snippet.
   const host = process.env.JSEARCH_HOST || "jsearch.p.rapidapi.com";
-  const path = process.env.JSEARCH_PATH || "/search";
+  const path = process.env.JSEARCH_PATH || "/search-v2";
   const params = new URLSearchParams({ query, num_pages: "1", date_posted: "week" });
   const country = countryFor(query);
   if (country) params.set("country", country);
