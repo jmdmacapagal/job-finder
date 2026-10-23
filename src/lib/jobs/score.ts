@@ -24,7 +24,7 @@ Score 0-100:
 
 The candidate's work-arrangement preferences, in order: remote (any country), then hybrid, then on-site in Qatar only. An on-site or hybrid role that requires living outside Qatar is a poor match (score at most 20) unless it offers relocation and remote work. Treat a listing restricted to residents of countries the candidate can't work from as a poor match.
 
-Give "reason" as one or two plain sentences the candidate can skim: the main reasons it fits and the biggest gap. Set "work_mode" from the listing, or "unknown" if it doesn't say.`;
+Give "reason" as one or two plain sentences the candidate can skim: the main reasons it fits and the biggest gap. Address the candidate directly as "you" ("fits your Vue experience"), never in the third person. Set "work_mode" from the listing, or "unknown" if it doesn't say.`;
 
 export function buildJobPrompt(job: RawJob): string {
   return [

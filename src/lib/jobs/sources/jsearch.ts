@@ -22,7 +22,7 @@ type JSearchJob = {
 
 function formatSalary(j: JSearchJob): string | null {
   if (!j.job_min_salary && !j.job_max_salary) return null;
-  const range = [j.job_min_salary, j.job_max_salary].filter(Boolean).join("–");
+  const range = [...new Set([j.job_min_salary, j.job_max_salary].filter(Boolean))].join("–");
   return j.job_salary_period ? `${range}/${j.job_salary_period.toLowerCase()}` : range;
 }
 

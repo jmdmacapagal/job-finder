@@ -38,6 +38,13 @@ describe("parseRemoteOk", () => {
     expect(jobs).toHaveLength(1);
     expect(jobs[0].salary).toBe("$60k–$90k/year");
   });
+
+  it("shows a single figure when min and max match", () => {
+    const [job] = parseRemoteOk([
+      { id: "2", url: "https://remoteok.com/2", position: "Vue Developer", salary_min: 10000, salary_max: 10000 },
+    ]);
+    expect(job.salary).toBe("$10k/year");
+  });
 });
 
 describe("parseJSearch", () => {

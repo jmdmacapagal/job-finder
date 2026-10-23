@@ -17,7 +17,7 @@ type RemoteOkJob = {
 function formatSalary(min?: number, max?: number): string | null {
   if (!min && !max) return null;
   const fmt = (n: number) => `$${Math.round(n / 1000)}k`;
-  if (min && max) return `${fmt(min)}–${fmt(max)}/year`;
+  if (min && max && fmt(min) !== fmt(max)) return `${fmt(min)}–${fmt(max)}/year`;
   return `${fmt((min || max)!)}/year`;
 }
 
