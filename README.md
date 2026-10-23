@@ -15,7 +15,7 @@ Built with Next.js 15 (App Router), TypeScript, Tailwind CSS 4 and Supabase (Pos
 
 ## Documentation
 
-See [`docs/`](docs/README.md) for the architecture, authentication, data model, the job-finding agent, operations and the decision log.
+See [`docs/`](docs/README.md) for the architecture, authentication, data model, the job-finding agent, applying, operations and the decision log.
 
 ## Setup
 

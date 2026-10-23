@@ -24,8 +24,8 @@ src/
   app/
     layout.tsx             Header and navigation
     page.tsx               Applications dashboard: stats, status filters, list
-    applications/          Add, edit and delete forms, and their server actions
-    openings/              Openings list (Good matches / Below 40% tabs), "Find jobs now", Dismiss
+    applications/          Add, edit and delete forms, the tailored email and CV, and /applications/<id>/cv (PDF)
+    openings/              Openings list (Good matches / Below 40% tabs), apply switches, "Apply to selected", "Find jobs now", Dismiss
     settings/              Master CV and search queries
     login/                 Magic-link sign-in form and server action
     auth/callback/         Swaps the emailed code for a session
@@ -36,6 +36,9 @@ src/
     supabase/server.ts     Supabase client bound to the signed-in user's cookies
     supabase/admin.ts      Service-role client for the cron job (bypasses RLS)
     jobs/                  The agent: sources, text helpers, scoring, run orchestration
+    apply/                 Applying: tailoring with Claude, CV PDF, Gmail sending, run orchestration
+    anthropic.ts           Shared Claude request options
+    concurrency.ts         Runs async work a few at a time
     types.ts               Shared types and labels
     validation.ts          zod schema for the application form
     stats.ts               Dashboard numbers

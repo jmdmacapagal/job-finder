@@ -31,6 +31,12 @@ export type Application = {
   applied_on: string | null;
   feedback: string | null;
   notes: string | null;
+  opening_id: string | null;
+  contact_email: string | null;
+  email_subject: string | null;
+  cover_email: string | null;
+  tailored_cv: string | null;
+  sent_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -50,6 +56,7 @@ export type JobOpening = {
   fit_reason: string | null;
   posted_at: string | null;
   selected: boolean;
+  applied_at: string | null;
   discovered_at: string;
 };
 

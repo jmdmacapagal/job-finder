@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { applyToSelected, type ApplySummary } from "@/lib/apply/run";
 import { runJobSearch, type RunSummary } from "@/lib/jobs/run";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,4 +27,29 @@ export async function dismissOpening(id: string) {
   const supabase = await createClient();
   await supabase.from("job_openings").update({ dismissed: true }).eq("id", id);
   revalidatePath("/openings");
+}
+
+export async function setSelected(id: string, selected: boolean) {
+  const supabase = await createClient();
+  await supabase.from("job_openings").update({ selected }).eq("id", id);
+  revalidatePath("/openings");
+}
+
+export type ApplyState = { summary?: ApplySummary; error?: string } | null;
+
+export async function applySelected(): Promise<ApplyState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You're signed out." };
+
+  try {
+    const summary = await applyToSelected(supabase, user.id);
+    revalidatePath("/openings");
+    revalidatePath("/");
+    return { summary };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
 }

@@ -92,3 +92,4 @@ The "Find jobs now" button doesn't need the service-role key. It runs as the sig
 | `SUPABASE_SERVICE_ROLE_KEY` (secret) | Cron route only | **No** |
 | `CRON_SECRET` | Cron route only | **No** |
 | `ALLOWED_EMAIL` | Login action | Server-only |
+| `GMAIL_APP_PASSWORD` | Apply action only | **No.** It can send mail as you. Revoke it at myaccount.google.com/apppasswords if it leaks. |
