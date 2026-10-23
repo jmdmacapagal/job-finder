@@ -1,3 +1,46 @@
 # Job Finder
 
-Personal job application tracker and AI job-finding agent.
+A personal, mobile-friendly dashboard for tracking job applications. It's built to grow into an AI agent that finds matching openings and tailors a CV for each one.
+
+Built with Next.js 15 (App Router), TypeScript, Tailwind CSS 4 and Supabase (Postgres + auth).
+
+## What works now
+
+- Sign in with an emailed sign-in link (only `ALLOWED_EMAIL` can sign in)
+- Applications dashboard: totals, active count, response rate, filters by status
+- Add, edit and delete applications: company, role, link, source, work mode, type, location, salary, status, date, feedback, notes
+- Openings page that lists rows from `job_openings`, sorted by fit score (the agent will fill this in later)
+
+## Setup
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In the Supabase SQL editor, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
+3. In Supabase → Authentication → URL Configuration, add `http://localhost:3000/auth/callback` (and your deployed URL's `/auth/callback`) to the redirect URLs.
+4. Copy `.env.example` to `.env.local` and fill in the values from Supabase → Project Settings → API.
+5. Install and run:
+
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+## Scripts
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm test` | Run unit tests (Vitest) |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript check |
+| `npm run build` | Production build |
+
+## Deploying
+
+Import the repo into [Vercel](https://vercel.com), add the four environment variables from `.env.example` (with `NEXT_PUBLIC_SITE_URL` set to the deployed URL), and add the deployed `/auth/callback` URL to Supabase's redirect URLs.
+
+## Roadmap
+
+1. ~~Master CV~~
+2. **Tracker web app** (this)
+3. Job-finding agent: searches Indeed, OnlineJobs.ph and Google, and reads LinkedIn job alert emails, then scores fit against the master CV with Claude
+4. Tailored CV and cover letter per job, plus assisted applying (you review and submit)
