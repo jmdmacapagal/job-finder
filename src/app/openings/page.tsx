@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Pagination } from "@/components/Pagination";
 import { MIN_FIT_SCORE } from "@/lib/jobs/run";
 import { pageRange, parsePage, totalPages } from "@/lib/pagination";
@@ -9,24 +10,37 @@ import { FindJobsButton } from "./FindJobsButton";
 // "Find jobs now" scores listings with Claude, which can take a while.
 export const maxDuration = 300;
 
-export default async function OpeningsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  const page = parsePage((await searchParams).page);
+type View = "good" | "low";
+
+export default async function OpeningsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; view?: string }>;
+}) {
+  const params = await searchParams;
+  const view: View = params.view === "low" ? "low" : "good";
+  const page = parsePage(params.page);
   const [from, to] = pageRange(page);
 
   const supabase = await createClient();
-  const { data, error, count } = await supabase
-    .from("job_openings")
-    .select("*", { count: "exact" })
-    .eq("dismissed", false)
-    .gte("fit_score", MIN_FIT_SCORE)
-    .order("fit_score", { ascending: false, nullsFirst: false })
-    .order("discovered_at", { ascending: false })
-    .range(from, to);
+  const visible = () => supabase.from("job_openings").select("id", { count: "exact", head: true }).eq("dismissed", false);
+  let query = supabase.from("job_openings").select("*", { count: "exact" }).eq("dismissed", false);
+  query = view === "good" ? query.gte("fit_score", MIN_FIT_SCORE) : query.lt("fit_score", MIN_FIT_SCORE);
+
+  const [{ data, error, count }, good, low] = await Promise.all([
+    query
+      .order("fit_score", { ascending: false, nullsFirst: false })
+      .order("discovered_at", { ascending: false })
+      .range(from, to),
+    visible().gte("fit_score", MIN_FIT_SCORE),
+    visible().lt("fit_score", MIN_FIT_SCORE),
+  ]);
 
   if (error) return <p className="text-red-600">Couldn&apos;t load openings: {error.message}</p>;
   const openings = (data ?? []) as JobOpening[];
   const total = count ?? 0;
   const pages = totalPages(total);
+  const hrefFor = (p: number) => `/openings?${new URLSearchParams({ ...(view === "low" && { view }), page: String(p) })}`;
 
   return (
     <div className="space-y-6">
@@ -38,13 +52,28 @@ export default async function OpeningsPage({ searchParams }: { searchParams: Pro
         <FindJobsButton />
       </div>
 
+      <nav className="flex gap-2 text-sm">
+        <Tab href="/openings" active={view === "good"} label={`Good matches (${good.count ?? 0})`} />
+        <Tab href="/openings?view=low" active={view === "low"} label={`Below ${MIN_FIT_SCORE}% (${low.count ?? 0})`} />
+      </nav>
+      {view === "low" && (
+        <p className="text-sm text-muted">
+          Jobs the agent scored as weaker fits. They&apos;re kept here in case one is still worth a look.
+        </p>
+      )}
+
       {openings.length === 0 && total > 0 ? (
         <div className="card p-8 text-center text-sm text-muted">
-          This page is empty. <a href="/openings" className="text-accent">Back to page 1</a>
+          This page is empty.{" "}
+          <Link href={hrefFor(1)} className="text-accent">
+            Back to page 1
+          </Link>
         </div>
       ) : openings.length === 0 ? (
         <div className="card p-8 text-center text-sm text-muted">
-          No openings yet. Add your CV in Settings, then press &quot;Find jobs now&quot;.
+          {view === "low"
+            ? "No weaker matches yet."
+            : "No openings yet. Add your CV in Settings, then press \"Find jobs now\"."}
         </div>
       ) : (
         <ul className="space-y-2">
@@ -84,7 +113,20 @@ export default async function OpeningsPage({ searchParams }: { searchParams: Pro
         </ul>
       )}
 
-      <Pagination page={page} totalPages={pages} total={total} hrefFor={(p) => `/openings?page=${p}`} />
+      <Pagination page={page} totalPages={pages} total={total} hrefFor={hrefFor} />
     </div>
+  );
+}
+
+function Tab({ href, active, label }: { href: string; active: boolean; label: string }) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full border px-3 py-1 ${
+        active ? "border-accent bg-accent text-white" : "border-border bg-surface text-muted"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
