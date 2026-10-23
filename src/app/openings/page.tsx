@@ -1,4 +1,5 @@
 import { Pagination } from "@/components/Pagination";
+import { MIN_FIT_SCORE } from "@/lib/jobs/run";
 import { pageRange, parsePage, totalPages } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 import { EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS, type JobOpening } from "@/lib/types";
@@ -17,6 +18,7 @@ export default async function OpeningsPage({ searchParams }: { searchParams: Pro
     .from("job_openings")
     .select("*", { count: "exact" })
     .eq("dismissed", false)
+    .gte("fit_score", MIN_FIT_SCORE)
     .order("fit_score", { ascending: false, nullsFirst: false })
     .order("discovered_at", { ascending: false })
     .range(from, to);

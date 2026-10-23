@@ -10,7 +10,7 @@ import type { RawJob } from "./types";
 // Caps per run keep Claude spend and function time predictable.
 const MAX_SCORED_PER_RUN = 150;
 const SCORE_CONCURRENCY = 10;
-// Listings scoring below this aren't worth showing.
+// Listings scoring below this are saved (so they're never re-scored) but hidden from Openings.
 export const MIN_FIT_SCORE = 40;
 
 export type RunSummary = {
@@ -109,7 +109,7 @@ export async function runJobSearch(supabase: SupabaseClient, userId: string, dep
 
   const rows = candidates.flatMap((job, i) => {
     const fit = fits[i];
-    if (!fit || fit.score < MIN_FIT_SCORE) return [];
+    if (!fit) return [];
     return [
       {
         user_id: userId,
@@ -140,7 +140,7 @@ export async function runJobSearch(supabase: SupabaseClient, userId: string, dep
     fetched: jobs.length,
     newCandidates: candidates.length,
     scored: fits.filter(Boolean).length,
-    saved: rows.length,
+    saved: rows.filter((r) => r.fit_score >= MIN_FIT_SCORE).length,
     errors,
   };
 }

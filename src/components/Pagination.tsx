@@ -9,7 +9,9 @@ type Props = {
 };
 
 export function Pagination({ page, totalPages, total, hrefFor }: Props) {
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1) {
+    return total > 0 ? <p className="text-center text-sm text-muted">{total} total</p> : null;
+  }
 
   return (
     <nav className="flex items-center justify-between gap-2 text-sm" aria-label="Pagination">
