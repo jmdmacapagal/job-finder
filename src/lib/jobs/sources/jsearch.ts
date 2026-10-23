@@ -26,8 +26,17 @@ function formatSalary(j: JSearchJob): string | null {
   return j.job_salary_period ? `${range}/${j.job_salary_period.toLowerCase()}` : range;
 }
 
-export function parseJSearch(json: { data?: JSearchJob[] }): RawJob[] {
-  return (json.data ?? [])
+// The older API returns `data` as the job list; the cursor-based one nests it next to `data.cursor`.
+type JSearchResponse = { data?: JSearchJob[] | { jobs?: JSearchJob[]; data?: JSearchJob[]; cursor?: string } };
+
+function jobsIn(json: JSearchResponse): JSearchJob[] {
+  const data = json.data;
+  if (Array.isArray(data)) return data;
+  return data?.jobs ?? data?.data ?? [];
+}
+
+export function parseJSearch(json: JSearchResponse): RawJob[] {
+  return jobsIn(json)
     .filter((j) => j.job_apply_link)
     .map((j) => {
       const description = j.job_description ?? "";
@@ -67,10 +76,11 @@ export async function fetchJSearch(
 ): Promise<RawJob[]> {
   // RapidAPI routes by host, which must match the one shown in your RapidAPI code snippet.
   const host = process.env.JSEARCH_HOST || "jsearch.p.rapidapi.com";
-  const params = new URLSearchParams({ query, page: "1", num_pages: "1", date_posted: "week" });
+  const path = process.env.JSEARCH_PATH || "/search";
+  const params = new URLSearchParams({ query, num_pages: "1", date_posted: "week" });
   const country = countryFor(query);
   if (country) params.set("country", country);
-  const res = await fetchImpl(`https://${host}/search?${params}`, {
+  const res = await fetchImpl(`https://${host}${path}?${params}`, {
     headers: { "X-RapidAPI-Key": apiKey, "X-RapidAPI-Host": host },
   });
   if (!res.ok) {

@@ -76,6 +76,18 @@ describe("parseJSearch", () => {
   });
 });
 
+describe("parseJSearch with the cursor-based response", () => {
+  it("reads jobs nested next to the cursor", () => {
+    const jobs = parseJSearch({
+      data: {
+        cursor: "abc",
+        jobs: [{ job_id: "1", job_title: "Vue Developer", job_apply_link: "https://example.com/1" }],
+      },
+    });
+    expect(jobs.map((j) => j.externalId)).toEqual(["jsearch:1"]);
+  });
+});
+
 describe("countryFor", () => {
   it("picks the country named in the search", () => {
     expect(countryFor("full stack developer Doha Qatar")).toBe("qa");
