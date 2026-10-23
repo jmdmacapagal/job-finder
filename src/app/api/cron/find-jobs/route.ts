@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAllowedEmail } from "@/lib/auth";
 import { runJobSearch } from "@/lib/jobs/run";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -12,11 +13,13 @@ export async function GET(request: Request) {
   }
 
   const supabase = createAdminClient();
-  const { data: profiles, error } = await supabase.from("profiles").select("user_id");
+  // Only invited accounts run, even if a stranger managed to sign up.
+  const { data: users, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const invited = users.users.filter((u) => isAllowedEmail(u.email));
 
   const results = [];
-  for (const { user_id } of profiles ?? []) {
+  for (const { id: user_id } of invited) {
     try {
       results.push({ user_id, ...(await runJobSearch(supabase, user_id)) });
     } catch (e) {

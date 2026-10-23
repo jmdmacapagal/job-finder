@@ -8,7 +8,7 @@ Copy `.env.example` to `.env.local` for local development. Add the same values t
 | --- | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Everything | Supabase → Project Settings → Data API, or the Connect button |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Everything | Supabase → Project Settings → API Keys → publishable key (or the legacy anon key) |
-| `ALLOWED_EMAIL` | Yes | Login | Your email |
+| `ALLOWED_EMAILS` | Yes | Login, middleware, cron | Comma-separated emails that can sign in. The older `ALLOWED_EMAIL` still works. |
 | `NEXT_PUBLIC_SITE_URL` | Recommended | Login redirect fallback | `http://localhost:3000` locally, or your deployed URL |
 | `ANTHROPIC_API_KEY` | For the agent | Scoring | console.anthropic.com → API Keys |
 | `ANTHROPIC_MODEL` | No | Scoring | Defaults to `claude-haiku-5-5` |
@@ -16,11 +16,15 @@ Copy `.env.example` to `.env.local` for local development. Add the same values t
 | `JSEARCH_HOST`, `JSEARCH_PATH` | No | JSearch | Only if RapidAPI changes them. Defaults: `jsearch.p.rapidapi.com`, `/search-v2` |
 | `SUPABASE_SERVICE_ROLE_KEY` | For the cron job | Cron | Supabase → API Keys → secret key (or the legacy service_role key). **Never expose it.** |
 | `CRON_SECRET` | For the cron job | Cron | Any long random string |
+| `GMAIL_USER` | To apply by email | Apply | Your Gmail address |
+| `GMAIL_APP_PASSWORD` | To apply by email | Apply | myaccount.google.com/apppasswords (needs 2-Step Verification on). **Never expose it.** |
+| `GMAIL_FROM_NAME` | No | Apply | The sender name recipients see, for example your full name |
+| `TAILOR_MODEL` | No | Apply | Defaults to `claude-opus-5-5`. `claude-sonnet-5-5` halves the cost. |
 
 ## Local setup
 
 1. Create a Supabase project.
-2. Run `supabase/migrations/0001_init.sql`, then `0002_job_agent.sql`, in the SQL Editor.
+2. Run the files in `supabase/migrations/` in order (`0001`, `0002`, `0003`) in the SQL Editor.
 3. In Supabase → Authentication → URL Configuration, add `http://localhost:3000/auth/callback` to the redirect URLs.
 4. Fill in `.env.local`, then run `npm install` and `npm run dev`.
 5. Sign in, paste your CV in **Settings**, and press **Find jobs now** on **Openings**.
@@ -60,3 +64,5 @@ GitHub Actions (`.github/workflows/ci.yml`) runs all four on every PR and on eve
 | "Add your CV in Settings before searching for jobs." | Paste your CV on the Settings page. |
 | Same results every run | Already-scored jobs are skipped by design, so new results depend on new listings. Add searches in Settings for more variety. |
 | Sign-in link doesn't come back to the app | The callback URL is missing from Supabase's redirect URLs. |
+| "Could not find the 'applied_at' column" or similar | Run `0003_apply.sql`. |
+| Gmail says `Invalid login` | Use an app password, not your Google password, and turn on 2-Step Verification first. |

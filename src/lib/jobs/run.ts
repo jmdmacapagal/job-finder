@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { mapWithConcurrency } from "@/lib/concurrency";
 import { scoreJob, type Fit } from "./score";
 import { fetchJSearch } from "./sources/jsearch";
 import { fetchRemoteOk } from "./sources/remoteok";
@@ -58,20 +59,6 @@ export function selectCandidates(jobs: RawJob[], knownUrls: Set<string>): RawJob
   }
   // Newest first, so the cap keeps the freshest listings.
   return out.sort((a, b) => (b.postedAt ?? "").localeCompare(a.postedAt ?? ""));
-}
-
-async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, async () => {
-      while (next < items.length) {
-        const i = next++;
-        results[i] = await fn(items[i]);
-      }
-    }),
-  );
-  return results;
 }
 
 export async function runJobSearch(supabase: SupabaseClient, userId: string, deps: Deps = {}): Promise<RunSummary> {

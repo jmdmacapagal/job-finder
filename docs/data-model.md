@@ -7,6 +7,7 @@ erDiagram
   AUTH_USERS ||--o| PROFILES : has
   AUTH_USERS ||--o{ APPLICATIONS : owns
   AUTH_USERS ||--o{ JOB_OPENINGS : owns
+  JOB_OPENINGS ||--o| APPLICATIONS : "applied as"
 ```
 
 ## `applications`
@@ -24,11 +25,16 @@ Jobs you've applied to (or saved to apply to). Created in `0001_init.sql`.
 | `status` | enum | `saved`, `applied`, `interviewing`, `offer`, `rejected`, `ghosted` (shown as "No response"), `withdrawn` |
 | `applied_on` | date | |
 | `feedback`, `notes` | text | |
+| `opening_id` | uuid | The opening it was applied from (`0003`) |
+| `contact_email` | text | Where the application was emailed, if anywhere |
+| `email_subject`, `cover_email` | text | The email Claude wrote |
+| `tailored_cv` | text | The tailored CV in Markdown; rendered to PDF on demand |
+| `sent_at` | timestamptz | When Gmail sent it; empty for site-only applications |
 | `created_at`, `updated_at` | timestamptz | `updated_at` is set by a trigger |
 
 ## `job_openings`
 
-Every listing the agent has scored. Created in `0001`, extended in `0002`.
+Every listing the agent has scored. Created in `0001`, extended in `0002` and `0003`.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -43,7 +49,8 @@ Every listing the agent has scored. Created in `0001`, extended in `0002`.
 | `fit_score` | smallint | 0–100, from Claude |
 | `fit_reason` | text | One or two sentences from Claude |
 | `dismissed` | boolean | Set by the Dismiss button |
-| `selected` | boolean | Reserved for step 4 (the apply toggle) |
+| `selected` | boolean | The checkbox on Openings |
+| `applied_at` | timestamptz | Set once applied to; hides it from Openings |
 | `discovered_at` | timestamptz | When the agent found it |
 
 **Why low scores are stored too:** if jobs scoring under 40 weren't saved, every run would re-score the same listings and pay for it again. They're saved, and the Openings page shows them in the "Below 40%" tab.
