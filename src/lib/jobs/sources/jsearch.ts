@@ -54,10 +54,15 @@ export async function fetchJSearch(
   apiKey: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<RawJob[]> {
+  // RapidAPI routes by host, which must match the one shown in your RapidAPI code snippet.
+  const host = process.env.JSEARCH_HOST || "jsearch.p.rapidapi.com";
   const params = new URLSearchParams({ query, page: "1", num_pages: "1", date_posted: "week" });
-  const res = await fetchImpl(`https://jsearch.p.rapidapi.com/search?${params}`, {
-    headers: { "X-RapidAPI-Key": apiKey, "X-RapidAPI-Host": "jsearch.p.rapidapi.com" },
+  const res = await fetchImpl(`https://${host}/search?${params}`, {
+    headers: { "X-RapidAPI-Key": apiKey, "X-RapidAPI-Host": host },
   });
-  if (!res.ok) throw new Error(`JSearch responded ${res.status}`);
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => "")).slice(0, 200);
+    throw new Error(`JSearch responded ${res.status}${detail ? `: ${detail}` : ""}`);
+  }
   return parseJSearch(await res.json());
 }
