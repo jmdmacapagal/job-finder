@@ -20,6 +20,7 @@ A running log of decisions and the reasoning behind them. Newest at the bottom.
 | 2026-10-23 | **The owner is BCC'd on every application** | Every email the agent sends is visible in the owner's inbox. |
 | 2026-10-23 | **The CV is attached as a PDF rendered in the app** | pdf-lib is pure JavaScript, so it runs on Vercel without a headless browser. The same PDF can be downloaded for site-only applications. |
 | 2026-10-23 | **Listings are data, except how-to-apply instructions** | Some listings hide tests like "include the word SEAMLESS". Claude follows those, and ignores anything else a listing asks. |
+| 2026-10-23 | **Tech-stack pills and salary come from keyword matching, not Claude** | It's free, instant, and works on listings already saved. Pills for tech that's also on your CV are highlighted. Salary falls back to the first pay figure in the description when the source gives none. |
 
 ## Planned
 

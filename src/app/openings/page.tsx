@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Pagination } from "@/components/Pagination";
+import { extractSalary, extractTechStack } from "@/lib/jobs/listing";
 import { MIN_FIT_SCORE } from "@/lib/jobs/run";
 import { pageRange, parsePage, totalPages } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
-import { EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS, type JobOpening } from "@/lib/types";
+import { EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS, type JobOpening, type WorkMode } from "@/lib/types";
 import { dismissOpening } from "./actions";
 import { ApplyButton } from "./ApplyButton";
 import { FindJobsButton } from "./FindJobsButton";
@@ -31,7 +32,7 @@ export default async function OpeningsPage({
   let query = supabase.from("job_openings").select("*", { count: "exact" }).eq("dismissed", false).is("applied_at", null);
   query = view === "good" ? query.gte("fit_score", MIN_FIT_SCORE) : query.lt("fit_score", MIN_FIT_SCORE);
 
-  const [{ data, error, count }, good, low, selected, selectedByEmail] = await Promise.all([
+  const [{ data, error, count }, good, low, selected, selectedByEmail, { data: profile }] = await Promise.all([
     query
       .order("fit_score", { ascending: false, nullsFirst: false })
       .order("discovered_at", { ascending: false })
@@ -40,10 +41,13 @@ export default async function OpeningsPage({
     visible().lt("fit_score", MIN_FIT_SCORE),
     visible().eq("selected", true),
     visible().eq("selected", true).not("apply_email", "is", null),
+    supabase.from("profiles").select("cv_markdown").maybeSingle(),
   ]);
 
   if (error) return <p className="text-red-600">Couldn&apos;t load openings: {error.message}</p>;
   const openings = (data ?? []) as JobOpening[];
+  // Tech the CV also mentions is highlighted, so gaps stand out.
+  const yourStack = new Set(extractTechStack(profile?.cv_markdown, Infinity));
   const total = count ?? 0;
   const pages = totalPages(total);
   const hrefFor = (p: number) => `/openings?${new URLSearchParams({ ...(view === "low" && { view }), page: String(p) })}`;
@@ -99,7 +103,6 @@ export default async function OpeningsPage({
                     </a>
                     <p className="text-sm text-muted">
                       {job.company}
-                      {job.work_mode && ` · ${WORK_MODE_LABELS[job.work_mode]}`}
                       {job.location && ` · ${job.location}`}
                     </p>
                   </div>
@@ -112,11 +115,11 @@ export default async function OpeningsPage({
                     <SelectCheckbox id={job.id} selected={job.selected} label={`Select ${job.title} at ${job.company}`} />
                   </div>
                 </div>
+                <JobHighlights job={job} yourStack={yourStack} />
                 {job.fit_reason && <p className="mt-2 text-sm">{job.fit_reason}</p>}
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
                   <span>via {job.source}</span>
                   {job.employment_type && <span>{EMPLOYMENT_TYPE_LABELS[job.employment_type]}</span>}
-                  {job.salary && <span>{job.salary}</span>}
                   {job.apply_email ? <span className="text-green-600">Can apply by email</span> : <span>Apply on site</span>}
                   <form action={dismissOpening.bind(null, job.id)} className="ml-auto">
                     <button type="submit" className="hover:text-foreground">
@@ -131,6 +134,52 @@ export default async function OpeningsPage({
       )}
 
       <Pagination page={page} totalPages={pages} total={total} hrefFor={hrefFor} />
+    </div>
+  );
+}
+
+const WORK_MODE_STYLES: Record<WorkMode, string> = {
+  remote: "bg-green-600 text-white",
+  hybrid: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  onsite: "bg-muted/15 text-muted",
+};
+
+function JobHighlights({ job, yourStack }: { job: JobOpening; yourStack: Set<string> }) {
+  const salary = job.salary ?? extractSalary(job.description);
+  const stack = extractTechStack(job.description);
+  if (!job.work_mode && !salary && stack.length === 0) return null;
+
+  return (
+    <div className="mt-3 space-y-2">
+      {(job.work_mode || salary) && (
+        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+          {job.work_mode && (
+            <span className={`rounded-full px-2.5 py-0.5 uppercase tracking-wide ${WORK_MODE_STYLES[job.work_mode]}`}>
+              {WORK_MODE_LABELS[job.work_mode]}
+            </span>
+          )}
+          {salary && (
+            <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-emerald-700 dark:text-emerald-400">
+              💰 {salary}
+            </span>
+          )}
+        </div>
+      )}
+      {stack.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5" aria-label="Tech stack">
+          {stack.map((tech) => (
+            <li
+              key={tech}
+              title={yourStack.has(tech) ? "On your CV" : "Not on your CV"}
+              className={`rounded-full border px-2 py-0.5 text-xs ${
+                yourStack.has(tech) ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted"
+              }`}
+            >
+              {tech}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

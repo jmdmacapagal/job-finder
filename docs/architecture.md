@@ -35,7 +35,7 @@ src/
   lib/
     supabase/server.ts     Supabase client bound to the signed-in user's cookies
     supabase/admin.ts      Service-role client for the cron job (bypasses RLS)
-    jobs/                  The agent: sources, text helpers, scoring, run orchestration
+    jobs/                  The agent: sources, text helpers, listing highlights (tech stack, salary), scoring, run orchestration
     apply/                 Applying: tailoring with Claude, CV PDF, Gmail sending, run orchestration
     anthropic.ts           Shared Claude request options
     concurrency.ts         Runs async work a few at a time

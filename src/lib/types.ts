@@ -51,6 +51,7 @@ export type JobOpening = {
   work_mode: WorkMode | null;
   employment_type: EmploymentType | null;
   salary: string | null;
+  description: string | null;
   apply_email: string | null;
   fit_score: number | null;
   fit_reason: string | null;
