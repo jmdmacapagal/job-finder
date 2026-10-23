@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mapWithConcurrency } from "@/lib/concurrency";
-import { createGmailSender, gmailConfigured, type SendEmail } from "./gmail";
+import { createGmailSender, gmailAccountFor, type SendEmail } from "./gmail";
 import { renderCvPdf } from "./pdf";
 import { tailorApplication, type ListingForTailoring, type Tailored } from "./tailor";
 
@@ -17,8 +17,10 @@ export type ApplySummary = {
 };
 
 type Deps = {
+  /** The signed-in user's email, which decides whether they may use the GMAIL_USER account. */
+  userEmail?: string | null;
   tailor?: (cv: string, listing: ListingForTailoring) => Promise<Tailored>;
-  /** null turns sending off, for users who don't own the configured Gmail account. */
+  /** Overrides the user's Gmail account; null turns sending off. */
   send?: SendEmail | null;
   today?: () => string;
 };
@@ -51,7 +53,7 @@ export function attachmentName(cv: string, company: string): string {
 export async function applyToSelected(supabase: SupabaseClient, userId: string, deps: Deps = {}): Promise<ApplySummary> {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("cv_markdown")
+    .select("cv_markdown, gmail_address, gmail_app_password_encrypted")
     .eq("user_id", userId)
     .maybeSingle();
   if (profileError) throw new Error(profileError.message);
@@ -78,7 +80,11 @@ export async function applyToSelected(supabase: SupabaseClient, userId: string, 
   const anthropic = deps.tailor ? null : new Anthropic();
   const tailor = deps.tailor ?? ((c: string, l: ListingForTailoring) => tailorApplication(anthropic!, c, l));
   let send = deps.send ?? undefined;
-  if (deps.send === undefined && gmailConfigured()) send = createGmailSender();
+  if (deps.send === undefined) {
+    const account = gmailAccountFor(profile, deps.userEmail);
+    // Recipients see the name from the CV unless the owner set GMAIL_FROM_NAME.
+    if (account) send = createGmailSender({ ...account, fromName: account.fromName || cvName(cv) });
+  }
   const today = deps.today ?? (() => new Date().toISOString().slice(0, 10));
 
   const summary: ApplySummary = { emailed: [], prepared: [], remaining: Math.max(0, (count ?? 0) - openings.length), errors: [] };
@@ -87,7 +93,7 @@ export async function applyToSelected(supabase: SupabaseClient, userId: string, 
     const label = `${job.title} at ${job.company}`;
     try {
       if (job.apply_email && !send) {
-        throw new Error("this one applies by email, but sending email isn't set up for your account");
+        throw new Error("this one applies by email, but you haven't added your Gmail in Settings");
       }
       const tailored = await tailor(cv, job);
 

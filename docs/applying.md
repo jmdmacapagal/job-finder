@@ -8,7 +8,7 @@ Step 4 turns Openings into sent applications without any typing.
 flowchart LR
   T[Select jobs in Openings] --> B[Press Apply to selected]
   B --> C[Claude tailors the CV and cover email]
-  C -->|Listing has an email| G[Gmail sends it with the CV as a PDF, BCC to you]
+  C -->|Listing has an email| G[Your Gmail sends it with the CV as a PDF, BCC to you]
   C -->|Apply on site| S[Saved with the tailored CV ready to download]
   G --> A[Application row: Applied]
   S --> A2[Application row: Saved]
@@ -17,7 +17,9 @@ flowchart LR
 1. Each opening has a checkbox, and "Select all on this page" ticks the whole page. Ticking one sets `job_openings.selected`.
 2. **Apply to selected** runs `applyToSelected` (`src/lib/apply/run.ts`) for up to 10 selected jobs, five at a time. If more are selected, press it again.
 3. For each job, Claude (`src/lib/apply/tailor.ts`) returns a subject line, a cover email and a tailored CV in Markdown.
-4. If the listing had an email address (`apply_email`), the CV is rendered to a PDF (`src/lib/apply/pdf.ts`) and sent from your Gmail (`src/lib/apply/gmail.ts`). You're BCC'd, so the sent application lands in your inbox too.
+4. If the listing had an email address (`apply_email`), the CV is rendered to a PDF (`src/lib/apply/pdf.ts`) and sent from your own Gmail (`src/lib/apply/gmail.ts`). You're BCC'd, so the sent application lands in your inbox too.
+
+   Each user adds their Gmail address and an app password in **Settings**. The password is encrypted with `CREDENTIALS_KEY` before it's saved. The owner can instead use `GMAIL_USER` and `GMAIL_APP_PASSWORD` from the environment, which only work for the user whose sign-in email matches `GMAIL_USER`. The sender name is the name on the CV.
 5. An `applications` row is created with the tailored CV, the email, and `opening_id`. Emailed jobs get status **Applied** and today's date. Site-only jobs get status **Saved**, with a note to apply on the company site.
 6. The opening gets `applied_at` and drops off Openings.
 
@@ -39,7 +41,7 @@ It uses Claude Opus 5.5 at medium effort (`TAILOR_MODEL` overrides it), because 
 
 | Option | Why not (or why) |
 | --- | --- |
-| **Gmail SMTP + app password** (chosen) | Sends from your real address, so replies come back to you. Setup is two env vars and no Google Cloud project. |
+| **Gmail SMTP + app password** (chosen) | Sends from your real address, so replies come back to you. Each user pastes an app password in Settings, with no Google Cloud project. |
 | Gmail API with OAuth | Needs a Google Cloud project, a consent screen, and token refresh. Worth it in step 5, when the app reads replies. |
 | A sending service (Resend, SendGrid) | Mail would come from a different domain, which looks odd to recruiters and lands in spam more. |
 
@@ -51,7 +53,7 @@ Each job is handled on its own, so one failure doesn't stop the others. A failed
 
 | Message | Meaning |
 | --- | --- |
-| `this one applies by email, but GMAIL_USER and GMAIL_APP_PASSWORD aren't set` | Add the Gmail variables. Nothing was sent. |
+| `this one applies by email, but you haven't added your Gmail in Settings` | Add your Gmail and app password in Settings. Nothing was sent. |
 | `the email was sent, but saving the application failed` | The application went out, but the row wasn't created. Add it by hand or check the database. |
 | `Invalid login` from Gmail | The app password is wrong, or 2-Step Verification is off. |
 

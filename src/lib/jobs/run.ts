@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mapWithConcurrency } from "@/lib/concurrency";
-import { scoreJob, type Fit } from "./score";
+import { scoreJob, type Candidate, type Fit } from "./score";
 import { fetchJSearch } from "./sources/jsearch";
 import { fetchRemoteOk } from "./sources/remoteok";
 import { fetchRemotive } from "./sources/remotive";
@@ -25,7 +25,7 @@ export type RunSummary = {
 type Deps = {
   anthropic?: Anthropic;
   fetchSources?: (queries: string[]) => Promise<{ jobs: RawJob[]; errors: string[] }>;
-  score?: (cv: string, job: RawJob) => Promise<Fit | null>;
+  score?: (candidate: Candidate, job: RawJob) => Promise<Fit | null>;
 };
 
 export async function fetchAllSources(queries: string[]): Promise<{ jobs: RawJob[]; errors: string[] }> {
@@ -64,7 +64,7 @@ export function selectCandidates(jobs: RawJob[], knownUrls: Set<string>): RawJob
 export async function runJobSearch(supabase: SupabaseClient, userId: string, deps: Deps = {}): Promise<RunSummary> {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("cv_markdown, search_queries")
+    .select("cv_markdown, search_queries, work_preferences")
     .eq("user_id", userId)
     .maybeSingle();
   if (profileError) throw new Error(profileError.message);
@@ -74,7 +74,8 @@ export async function runJobSearch(supabase: SupabaseClient, userId: string, dep
     throw new Error("ANTHROPIC_API_KEY is not set, so jobs can't be scored.");
   }
   const anthropic = deps.anthropic ?? new Anthropic();
-  const score = deps.score ?? ((cv: string, job: RawJob) => scoreJob(anthropic, cv, job));
+  const score = deps.score ?? ((candidate: Candidate, job: RawJob) => scoreJob(anthropic, candidate, job));
+  const candidate: Candidate = { cv: profile.cv_markdown, preferences: profile.work_preferences ?? "" };
   const { jobs, errors } = await (deps.fetchSources ?? fetchAllSources)(profile.search_queries ?? []);
 
   // Skip listings already saved or already applied to.
@@ -87,7 +88,7 @@ export async function runJobSearch(supabase: SupabaseClient, userId: string, dep
   const candidates = selectCandidates(jobs, known).slice(0, MAX_SCORED_PER_RUN);
   const fits = await mapWithConcurrency(candidates, SCORE_CONCURRENCY, async (job) => {
     try {
-      return await score(profile.cv_markdown, job);
+      return await score(candidate, job);
     } catch (e) {
       errors.push(`Scoring "${job.title}": ${e instanceof Error ? e.message : String(e)}`);
       return null;

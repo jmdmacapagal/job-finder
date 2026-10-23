@@ -42,12 +42,7 @@ It then sorts newest first and keeps the first **150**.
 - **Model:** `claude-haiku-5-5` by default. Override it with `ANTHROPIC_MODEL`.
 - **Effort:** `low`. Fit scoring is a quick judgment.
 - **Structured output:** `client.beta.messages.parse` with a zod schema `{ score: 0–100, reason, work_mode }`, so the result is always valid JSON.
-- **Prompt:** the system prompt holds the scoring rubric and your preferences:
-  1. Remote (any country)
-  2. Hybrid
-  3. On-site in Qatar only
-
-  On-site or hybrid roles outside Qatar score 20 or lower. The CV is a second system block marked for prompt caching. The job listing, trimmed to 6,000 characters, is the user message.
+- **Prompt:** the system prompt holds the scoring rubric. A second system block holds the user's CV and their work preferences from Settings (`profiles.work_preferences`), and is marked for prompt caching. Roles whose arrangement or location the preferences rule out score 20 or lower. With no preferences, Claude assumes remote work or the CV's location. The job listing, trimmed to 6,000 characters, is the user message.
 - **Refusals:** if Claude declines, the job is skipped. Larger models also get `fallbacks: "default"`, which re-runs a declined request on another model. Haiku doesn't support it, so it isn't sent.
 - **Concurrency:** 10 jobs at a time.
 
