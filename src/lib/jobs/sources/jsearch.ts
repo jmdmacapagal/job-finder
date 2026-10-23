@@ -49,6 +49,17 @@ export function parseJSearch(json: { data?: JSearchJob[] }): RawJob[] {
     });
 }
 
+// JSearch searches one country at a time and defaults to the US, so local searches must name theirs.
+const COUNTRY_HINTS: [RegExp, string][] = [
+  [/\b(qatar|doha)\b/i, "qa"],
+  [/\b(philippines|manila|cebu)\b/i, "ph"],
+  [/\b(uae|dubai|abu dhabi)\b/i, "ae"],
+];
+
+export function countryFor(query: string): string | null {
+  return COUNTRY_HINTS.find(([pattern]) => pattern.test(query))?.[1] ?? null;
+}
+
 export async function fetchJSearch(
   query: string,
   apiKey: string,
@@ -57,6 +68,8 @@ export async function fetchJSearch(
   // RapidAPI routes by host, which must match the one shown in your RapidAPI code snippet.
   const host = process.env.JSEARCH_HOST || "jsearch.p.rapidapi.com";
   const params = new URLSearchParams({ query, page: "1", num_pages: "1", date_posted: "week" });
+  const country = countryFor(query);
+  if (country) params.set("country", country);
   const res = await fetchImpl(`https://${host}/search?${params}`, {
     headers: { "X-RapidAPI-Key": apiKey, "X-RapidAPI-Host": host },
   });

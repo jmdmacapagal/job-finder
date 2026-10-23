@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseJSearch } from "./jsearch";
+import { countryFor, parseJSearch } from "./jsearch";
 import { parseRemoteOk } from "./remoteok";
 import { parseRemotive } from "./remotive";
 
@@ -73,5 +73,13 @@ describe("parseJSearch", () => {
       location: "Doha, QA",
       employmentType: "full_time",
     });
+  });
+});
+
+describe("countryFor", () => {
+  it("picks the country named in the search", () => {
+    expect(countryFor("full stack developer Doha Qatar")).toBe("qa");
+    expect(countryFor("react developer Manila")).toBe("ph");
+    expect(countryFor("full stack engineer")).toBeNull();
   });
 });
