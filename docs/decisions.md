@@ -8,7 +8,7 @@ A running log of decisions and the reasoning behind them. Newest at the bottom.
 | 2026-10-23 | **Supabase for the database and auth** | Free hosted Postgres with built-in email sign-in and row-level security, so there's no separate auth service to run. |
 | 2026-10-23 | **Magic-link sign-in limited to one email** | A personal app with no passwords to manage. `ALLOWED_EMAIL` blocks strangers. |
 | 2026-10-23 | **No scraping of LinkedIn or Indeed** | Both forbid it and can ban accounts. JSearch (Google for Jobs) covers their listings legitimately. |
-| 2026-10-23 | **The owner chooses every application** | Fully automatic applying breaks job boards' terms and risks bans. The agent only applies to jobs the owner switched on, and only when the owner presses Apply. It never submits forms on LinkedIn or Indeed. |
+| 2026-10-23 | **The owner chooses every application** | Fully automatic applying breaks job boards' terms and risks bans. The agent only applies to jobs the owner selected, and only when the owner presses Apply. It never submits forms on LinkedIn or Indeed. |
 | 2026-10-23 | **No manual data entry** | The agent fills Openings, and applying (step 4) will fill Applications automatically. |
 | 2026-10-23 | **Work preference order: remote → hybrid → on-site in Qatar only** | The owner's stated preference, built into the scoring prompt. |
 | 2026-10-23 | **Claude Haiku 5.5, scoring up to 150 jobs a run** | About 30x cheaper than Opus, so it gives 5x the coverage for about $0.15 a run. Fit scoring is a simple judgment that Haiku handles well. |

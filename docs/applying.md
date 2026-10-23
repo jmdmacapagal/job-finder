@@ -6,7 +6,7 @@ Step 4 turns Openings into sent applications without any typing.
 
 ```mermaid
 flowchart LR
-  T[Switch on jobs in Openings] --> B[Press Apply to selected]
+  T[Select jobs in Openings] --> B[Press Apply to selected]
   B --> C[Claude tailors the CV and cover email]
   C -->|Listing has an email| G[Gmail sends it with the CV as a PDF, BCC to you]
   C -->|Apply on site| S[Saved with the tailored CV ready to download]
@@ -14,7 +14,7 @@ flowchart LR
   S --> A2[Application row: Saved]
 ```
 
-1. Each opening has a switch. Switching it on sets `job_openings.selected`.
+1. Each opening has a Select checkbox. Ticking it sets `job_openings.selected`.
 2. **Apply to selected** runs `applyToSelected` (`src/lib/apply/run.ts`) for up to 10 selected jobs, five at a time. If more are selected, press it again.
 3. For each job, Claude (`src/lib/apply/tailor.ts`) returns a subject line, a cover email and a tailored CV in Markdown.
 4. If the listing had an email address (`apply_email`), the CV is rendered to a PDF (`src/lib/apply/pdf.ts`) and sent from your Gmail (`src/lib/apply/gmail.ts`). You're BCC'd, so the sent application lands in your inbox too.

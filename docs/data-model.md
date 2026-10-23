@@ -49,7 +49,7 @@ Every listing the agent has scored. Created in `0001`, extended in `0002` and `0
 | `fit_score` | smallint | 0–100, from Claude |
 | `fit_reason` | text | One or two sentences from Claude |
 | `dismissed` | boolean | Set by the Dismiss button |
-| `selected` | boolean | The apply switch on Openings |
+| `selected` | boolean | The Select checkbox on Openings |
 | `applied_at` | timestamptz | Set once applied to; hides it from Openings |
 | `discovered_at` | timestamptz | When the agent found it |
 

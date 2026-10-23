@@ -4,9 +4,10 @@ import { MIN_FIT_SCORE } from "@/lib/jobs/run";
 import { pageRange, parsePage, totalPages } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 import { EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS, type JobOpening } from "@/lib/types";
-import { dismissOpening, setSelected } from "./actions";
+import { dismissOpening } from "./actions";
 import { ApplyButton } from "./ApplyButton";
 import { FindJobsButton } from "./FindJobsButton";
+import { SelectCheckbox } from "./SelectCheckbox";
 
 // "Find jobs now" and "Apply to selected" call Claude, which can take a while.
 export const maxDuration = 300;
@@ -53,7 +54,7 @@ export default async function OpeningsPage({
         <div>
           <h1 className="text-2xl font-semibold">Openings</h1>
           <p className="text-sm text-muted">
-            The agent checks for new matches every morning. Switch on the jobs you want, then apply in one go.
+            The agent checks for new matches every morning. Select the jobs you want, then apply in one go.
           </p>
         </div>
         <div className="flex flex-wrap items-start gap-3">
@@ -106,21 +107,7 @@ export default async function OpeningsPage({
                       {job.fit_score}% fit
                     </span>
                   )}
-                  <form action={setSelected.bind(null, job.id, !job.selected)}>
-                    <button
-                      type="submit"
-                      role="switch"
-                      aria-checked={job.selected}
-                      aria-label={job.selected ? "Don't apply to this job" : "Apply to this job"}
-                      className={`relative h-6 w-11 rounded-full transition-colors ${job.selected ? "bg-accent" : "bg-muted/40"}`}
-                    >
-                      <span
-                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-                          job.selected ? "left-[22px]" : "left-0.5"
-                        }`}
-                      />
-                    </button>
-                  </form>
+                  <SelectCheckbox id={job.id} selected={job.selected} />
                 </div>
               </div>
               {job.fit_reason && <p className="mt-2 text-sm">{job.fit_reason}</p>}
