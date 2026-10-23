@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import { WORK_MODE_LABELS, type JobOpening } from "@/lib/types";
+import { EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS, type JobOpening } from "@/lib/types";
+import { dismissOpening } from "./actions";
+import { FindJobsButton } from "./FindJobsButton";
+
+// "Find jobs now" scores listings with Claude, which can take a while.
+export const maxDuration = 300;
 
 export default async function OpeningsPage() {
   const supabase = await createClient();
@@ -15,10 +20,17 @@ export default async function OpeningsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Openings</h1>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Openings</h1>
+          <p className="text-sm text-muted">The agent checks for new matches every morning.</p>
+        </div>
+        <FindJobsButton />
+      </div>
+
       {openings.length === 0 ? (
         <div className="card p-8 text-center text-sm text-muted">
-          No openings yet. The job-finding agent will fill this list with roles that match your CV.
+          No openings yet. Add your CV in Settings, then press &quot;Find jobs now&quot;.
         </div>
       ) : (
         <ul className="space-y-2">
@@ -30,8 +42,9 @@ export default async function OpeningsPage() {
                     {job.title}
                   </a>
                   <p className="text-sm text-muted">
-                    {job.company} · {job.source}
+                    {job.company}
                     {job.work_mode && ` · ${WORK_MODE_LABELS[job.work_mode]}`}
+                    {job.location && ` · ${job.location}`}
                   </p>
                 </div>
                 {job.fit_score !== null && (
@@ -40,7 +53,18 @@ export default async function OpeningsPage() {
                   </span>
                 )}
               </div>
-              {job.fit_reason && <p className="mt-2 text-sm text-muted">{job.fit_reason}</p>}
+              {job.fit_reason && <p className="mt-2 text-sm">{job.fit_reason}</p>}
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+                <span>via {job.source}</span>
+                {job.employment_type && <span>{EMPLOYMENT_TYPE_LABELS[job.employment_type]}</span>}
+                {job.salary && <span>{job.salary}</span>}
+                {job.apply_email ? <span className="text-green-600">Can apply by email</span> : <span>Apply on site</span>}
+                <form action={dismissOpening.bind(null, job.id)} className="ml-auto">
+                  <button type="submit" className="hover:text-foreground">
+                    Dismiss
+                  </button>
+                </form>
+              </div>
             </li>
           ))}
         </ul>

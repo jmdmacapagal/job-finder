@@ -17,7 +17,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body className="antialiased">
         <header className="border-b border-border bg-surface">
-          <nav className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3 text-sm">
+          <nav className="mx-auto flex max-w-5xl items-center gap-3 overflow-x-auto whitespace-nowrap px-4 py-3 text-sm sm:gap-4">
             <Link href="/" className="font-semibold">
               Job Finder
             </Link>
@@ -26,6 +26,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </Link>
             <Link href="/openings" className="text-muted hover:text-foreground">
               Openings
+            </Link>
+            <Link href="/settings" className="text-muted hover:text-foreground">
+              Settings
             </Link>
             <form action="/auth/signout" method="post" className="ml-auto">
               <button className="text-muted hover:text-foreground">Sign out</button>
