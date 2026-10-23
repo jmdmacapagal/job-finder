@@ -1,3 +1,5 @@
+import { Pagination } from "@/components/Pagination";
+import { pageRange, parsePage, totalPages } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 import { EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS, type JobOpening } from "@/lib/types";
 import { dismissOpening } from "./actions";
@@ -6,17 +8,23 @@ import { FindJobsButton } from "./FindJobsButton";
 // "Find jobs now" scores listings with Claude, which can take a while.
 export const maxDuration = 300;
 
-export default async function OpeningsPage() {
+export default async function OpeningsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const page = parsePage((await searchParams).page);
+  const [from, to] = pageRange(page);
+
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from("job_openings")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("dismissed", false)
     .order("fit_score", { ascending: false, nullsFirst: false })
-    .limit(100);
+    .order("discovered_at", { ascending: false })
+    .range(from, to);
 
   if (error) return <p className="text-red-600">Couldn&apos;t load openings: {error.message}</p>;
   const openings = (data ?? []) as JobOpening[];
+  const total = count ?? 0;
+  const pages = totalPages(total);
 
   return (
     <div className="space-y-6">
@@ -28,7 +36,11 @@ export default async function OpeningsPage() {
         <FindJobsButton />
       </div>
 
-      {openings.length === 0 ? (
+      {openings.length === 0 && total > 0 ? (
+        <div className="card p-8 text-center text-sm text-muted">
+          This page is empty. <a href="/openings" className="text-accent">Back to page 1</a>
+        </div>
+      ) : openings.length === 0 ? (
         <div className="card p-8 text-center text-sm text-muted">
           No openings yet. Add your CV in Settings, then press &quot;Find jobs now&quot;.
         </div>
@@ -69,6 +81,8 @@ export default async function OpeningsPage() {
           ))}
         </ul>
       )}
+
+      <Pagination page={page} totalPages={pages} total={total} hrefFor={(p) => `/openings?page=${p}`} />
     </div>
   );
 }
