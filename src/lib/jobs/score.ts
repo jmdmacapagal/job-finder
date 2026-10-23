@@ -10,7 +10,12 @@ export const FitSchema = z.object({
 });
 export type Fit = z.infer<typeof FitSchema>;
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
+// Fit scoring is a simple judgment, so the fast, cheap model is enough.
+const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-5-5";
+// Haiku has no server-side refusal fallback; larger models re-run a declined request on another model.
+const FALLBACK_PARAMS = MODEL.startsWith("claude-haiku")
+  ? {}
+  : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const };
 // Long descriptions add cost without changing the verdict much.
 const MAX_DESCRIPTION_CHARS = 6000;
 
@@ -48,8 +53,7 @@ export async function scoreJob(client: Anthropic, cv: string, job: RawJob): Prom
   const response = await client.beta.messages.parse({
     model: MODEL,
     max_tokens: 2000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    ...FALLBACK_PARAMS,
     // The CV is identical for every job in a run, so keep it in the cached prefix.
     system: [
       { type: "text", text: SYSTEM },

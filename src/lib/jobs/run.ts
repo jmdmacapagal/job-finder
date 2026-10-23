@@ -8,8 +8,8 @@ import { isRelevantTitle } from "./text";
 import type { RawJob } from "./types";
 
 // Caps per run keep Claude spend and function time predictable.
-const MAX_SCORED_PER_RUN = 30;
-const SCORE_CONCURRENCY = 5;
+const MAX_SCORED_PER_RUN = 150;
+const SCORE_CONCURRENCY = 10;
 // Listings scoring below this aren't worth showing.
 export const MIN_FIT_SCORE = 40;
 

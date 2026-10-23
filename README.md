@@ -46,7 +46,7 @@ Import the repo into [Vercel](https://vercel.com), add the environment variables
 curl -H "Authorization: Bearer $CRON_SECRET" https://your-app.vercel.app/api/cron/find-jobs
 ```
 
-Each run scores at most 30 new listings, so Claude costs stay small and predictable.
+Each run scores at most 150 new listings with Claude Haiku 5.5, which costs roughly $0.15 per run. Set `ANTHROPIC_MODEL` to use a different model.
 
 ## Roadmap
 
