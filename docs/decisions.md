@@ -27,6 +27,7 @@ A running log of decisions and the reasoning behind them. Newest at the bottom.
 | 2026-10-23 | **Only the `GMAIL_USER` account can send applications** | The Gmail credentials belong to one person. Other users' email-apply jobs fail with a clear message until per-user email sending exists. |
 | 2026-10-23 | **Each user sends from their own Gmail, saved encrypted in Settings** | Friends can't share one inbox. App passwords are encrypted with AES-256-GCM using `CREDENTIALS_KEY`, so a database leak alone doesn't expose them. The owner's environment account still works for them alone. |
 | 2026-10-23 | **Work preferences are per user, in free text** | The owner's "remote, then on-site in Qatar" rule used to be built into the scoring prompt. Now each user writes their own, and the owner's existing profile was given theirs by migration `0004`. |
+| 2026-10-27 | **Applications start as Gmail drafts; sending is behind `APPLY_SEND_EMAILS` (off)** | The owner wants to read every email before it goes out. Drafts are saved over IMAP with the same app password, so nothing new to set up, and the switch to sending is one variable once the output is trusted. |
 
 ## Planned
 

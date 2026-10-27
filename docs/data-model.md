@@ -29,7 +29,8 @@ Jobs you've applied to (or saved to apply to). Created in `0001_init.sql`.
 | `contact_email` | text | Where the application was emailed, if anywhere |
 | `email_subject`, `cover_email` | text | The email Claude wrote |
 | `tailored_cv` | text | The tailored CV in Markdown; rendered to PDF on demand |
-| `sent_at` | timestamptz | When Gmail sent it; empty for site-only applications |
+| `sent_at` | timestamptz | When Gmail sent it, or when you pressed Mark as sent on a draft; empty otherwise |
+| `draft_saved_at` | timestamptz | When the email was saved to your Gmail Drafts (`0005_gmail_drafts.sql`); a draft with no `sent_at` shows **Draft in Gmail** |
 | `created_at`, `updated_at` | timestamptz | `updated_at` is set by a trigger |
 
 ## `job_openings`
