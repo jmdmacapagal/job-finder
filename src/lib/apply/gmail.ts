@@ -1,4 +1,6 @@
+import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
+import type Mail from "nodemailer/lib/mailer";
 import { decryptSecret } from "@/lib/crypto";
 
 export type OutgoingEmail = {
@@ -9,6 +11,9 @@ export type OutgoingEmail = {
 };
 
 export type SendEmail = (email: OutgoingEmail) => Promise<void>;
+
+/** Saves the email in the account's Drafts folder without sending it. */
+export type SaveDraft = (email: OutgoingEmail) => Promise<void>;
 
 export type GmailAccount = { user: string; pass: string; fromName?: string };
 
@@ -35,30 +40,65 @@ export function gmailAccountFor(profile: GmailProfile | null, userEmail: string 
   return null;
 }
 
+function mailOptions({ user, fromName }: GmailAccount, email: OutgoingEmail): Mail.Options {
+  return {
+    from: fromName ? `"${fromName.replace(/"/g, "")}" <${user}>` : user,
+    to: email.to,
+    subject: email.subject,
+    text: email.text,
+    attachments: [
+      { filename: email.attachment.filename, content: Buffer.from(email.attachment.content), contentType: "application/pdf" },
+    ],
+  };
+}
+
+/** The complete email (headers, body and attachment) as Gmail would store it. */
+export async function buildRawEmail(account: GmailAccount, email: OutgoingEmail): Promise<Buffer> {
+  const composer = nodemailer.createTransport({ streamTransport: true, buffer: true, newline: "windows" });
+  const info = await composer.sendMail(mailOptions(account, email));
+  return info.message as Buffer;
+}
+
 /**
  * Sends over Gmail SMTP with an app password, and BCCs the sender so every
  * application also lands in their inbox.
  */
-export function createGmailSender({ user, pass, fromName }: GmailAccount): SendEmail {
+export function createGmailSender(account: GmailAccount): SendEmail {
   const transport = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 465,
     secure: true,
     // App passwords are shown with spaces; Gmail accepts them either way.
-    auth: { user, pass: pass.replace(/\s+/g, "") },
+    auth: { user: account.user, pass: account.pass.replace(/\s+/g, "") },
   });
-  const from = fromName ? `"${fromName.replace(/"/g, "")}" <${user}>` : user;
 
   return async (email) => {
-    await transport.sendMail({
-      from,
-      to: email.to,
-      bcc: user,
-      subject: email.subject,
-      text: email.text,
-      attachments: [
-        { filename: email.attachment.filename, content: Buffer.from(email.attachment.content), contentType: "application/pdf" },
-      ],
+    await transport.sendMail({ ...mailOptions(account, email), bcc: account.user });
+  };
+}
+
+/**
+ * Saves emails to the account's Gmail Drafts over IMAP, using the same app
+ * password as sending. Nothing is sent: the user reviews and sends from Gmail.
+ */
+export function createGmailDraftSaver(account: GmailAccount): SaveDraft {
+  return async (email) => {
+    const raw = await buildRawEmail(account, email);
+    const client = new ImapFlow({
+      host: "imap.gmail.com",
+      port: 993,
+      secure: true,
+      auth: { user: account.user, pass: account.pass.replace(/\s+/g, "") },
+      logger: false,
     });
+    await client.connect();
+    try {
+      // Gmail names the folder by the account's language, so find it by its role.
+      const folders = await client.list();
+      const drafts = folders.find((f) => f.specialUse === "\\Drafts")?.path ?? "[Gmail]/Drafts";
+      await client.append(drafts, raw, ["\\Draft", "\\Seen"]);
+    } finally {
+      await client.logout().catch(() => {});
+    }
   };
 }

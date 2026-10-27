@@ -36,3 +36,17 @@ export async function deleteApplication(id: string) {
   revalidatePath("/");
   redirect("/");
 }
+
+/** For an application whose Gmail draft the user has reviewed and sent themselves. */
+export async function markDraftSent(id: string) {
+  const supabase = await createClient();
+  const now = new Date();
+  const { error } = await supabase
+    .from("applications")
+    .update({ status: "applied", applied_on: now.toISOString().slice(0, 10), sent_at: now.toISOString() })
+    .eq("id", id)
+    .is("sent_at", null);
+  if (error) throw new Error(error.message);
+  revalidatePath("/");
+  revalidatePath(`/applications/${id}`);
+}

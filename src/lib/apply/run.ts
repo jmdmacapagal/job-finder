@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mapWithConcurrency } from "@/lib/concurrency";
-import { createGmailSender, gmailAccountFor, type SendEmail } from "./gmail";
+import { createGmailDraftSaver, createGmailSender, gmailAccountFor, type OutgoingEmail, type SaveDraft, type SendEmail } from "./gmail";
 import { renderCvPdf } from "./pdf";
 import { tailorApplication, type ListingForTailoring, type Tailored } from "./tailor";
 
@@ -9,8 +9,17 @@ import { tailorApplication, type ListingForTailoring, type Tailored } from "./ta
 export const MAX_APPLY_PER_RUN = 10;
 const APPLY_CONCURRENCY = 5;
 
+/**
+ * Off by default: applications are saved as Gmail drafts for the user to
+ * review and send themselves. Set APPLY_SEND_EMAILS=true to send directly.
+ */
+export function sendingEnabled(): boolean {
+  return process.env.APPLY_SEND_EMAILS === "true";
+}
+
 export type ApplySummary = {
   emailed: string[];
+  drafted: string[];
   prepared: string[];
   remaining: number;
   errors: string[];
@@ -20,8 +29,11 @@ type Deps = {
   /** The signed-in user's email, which decides whether they may use the GMAIL_USER account. */
   userEmail?: string | null;
   tailor?: (cv: string, listing: ListingForTailoring) => Promise<Tailored>;
-  /** Overrides the user's Gmail account; null turns sending off. */
+  /** Overrides the user's Gmail account; null means no Gmail is set up. */
   send?: SendEmail | null;
+  saveDraft?: SaveDraft | null;
+  /** Overrides APPLY_SEND_EMAILS. */
+  sendEmails?: boolean;
   today?: () => string;
 };
 
@@ -46,9 +58,10 @@ export function attachmentName(cv: string, company: string): string {
 }
 
 /**
- * Applies to every selected opening: Claude tailors the CV and cover email,
- * listings with an email address get it sent through Gmail, and the rest are
- * saved as applications with the tailored CV ready to use on the company site.
+ * Applies to every selected opening: Claude tailors the CV and cover email.
+ * Listings with an email address get a Gmail draft (or, with sending turned
+ * on, a sent email), and the rest are saved with the tailored CV ready to use
+ * on the company site.
  */
 export async function applyToSelected(supabase: SupabaseClient, userId: string, deps: Deps = {}): Promise<ApplySummary> {
   const { data: profile, error: profileError } = await supabase
@@ -79,34 +92,37 @@ export async function applyToSelected(supabase: SupabaseClient, userId: string, 
 
   const anthropic = deps.tailor ? null : new Anthropic();
   const tailor = deps.tailor ?? ((c: string, l: ListingForTailoring) => tailorApplication(anthropic!, c, l));
-  let send = deps.send ?? undefined;
-  if (deps.send === undefined) {
-    const account = gmailAccountFor(profile, deps.userEmail);
-    // Recipients see the name from the CV unless the owner set GMAIL_FROM_NAME.
-    if (account) send = createGmailSender({ ...account, fromName: account.fromName || cvName(cv) });
-  }
+  const sendEmails = deps.sendEmails ?? sendingEnabled();
+  const account = gmailAccountFor(profile, deps.userEmail);
+  // Recipients see the name from the CV unless the owner set GMAIL_FROM_NAME.
+  const named = account && { ...account, fromName: account.fromName || cvName(cv) };
+  const deliver: ((email: OutgoingEmail) => Promise<void>) | null = sendEmails
+    ? (deps.send !== undefined ? deps.send : named && createGmailSender(named))
+    : (deps.saveDraft !== undefined ? deps.saveDraft : named && createGmailDraftSaver(named));
   const today = deps.today ?? (() => new Date().toISOString().slice(0, 10));
 
-  const summary: ApplySummary = { emailed: [], prepared: [], remaining: Math.max(0, (count ?? 0) - openings.length), errors: [] };
+  const summary: ApplySummary = { emailed: [], drafted: [], prepared: [], remaining: Math.max(0, (count ?? 0) - openings.length), errors: [] };
 
   await mapWithConcurrency(openings, APPLY_CONCURRENCY, async (job) => {
     const label = `${job.title} at ${job.company}`;
     try {
-      if (job.apply_email && !send) {
+      if (job.apply_email && !deliver) {
         throw new Error("this one applies by email, but you haven't added your Gmail in Settings");
       }
       const tailored = await tailor(cv, job);
 
       let sentAt: string | null = null;
-      if (job.apply_email && send) {
+      let draftSavedAt: string | null = null;
+      if (job.apply_email && deliver) {
         const pdf = await renderCvPdf(tailored.cv_markdown, `${cvName(cv)} CV`);
-        await send({
+        await deliver({
           to: job.apply_email,
           subject: tailored.subject,
           text: tailored.cover_email,
           attachment: { filename: attachmentName(cv, job.company), content: pdf },
         });
-        sentAt = new Date().toISOString();
+        if (sendEmails) sentAt = new Date().toISOString();
+        else draftSavedAt = new Date().toISOString();
       }
 
       const { error: insertError } = await supabase.from("applications").insert({
@@ -127,19 +143,23 @@ export async function applyToSelected(supabase: SupabaseClient, userId: string, 
         cover_email: tailored.cover_email,
         tailored_cv: tailored.cv_markdown,
         sent_at: sentAt,
-        notes: sentAt ? `Emailed to ${job.apply_email} by the agent.` : "Apply on the company site with the tailored CV.",
+        draft_saved_at: draftSavedAt,
+        notes: sentAt
+          ? `Emailed to ${job.apply_email} by the agent.`
+          : draftSavedAt
+            ? `Draft to ${job.apply_email} saved in Gmail. Review and send it there, then mark it as sent here.`
+            : "Apply on the company site with the tailored CV.",
       });
       if (insertError) {
-        throw new Error(
-          sentAt ? `the email was sent, but saving the application failed: ${insertError.message}` : insertError.message,
-        );
+        const done = sentAt ? "the email was sent" : draftSavedAt ? "the Gmail draft was saved" : null;
+        throw new Error(done ? `${done}, but saving the application failed: ${insertError.message}` : insertError.message);
       }
 
       await supabase
         .from("job_openings")
         .update({ applied_at: new Date().toISOString(), selected: false })
         .eq("id", job.id);
-      (sentAt ? summary.emailed : summary.prepared).push(label);
+      (sentAt ? summary.emailed : draftSavedAt ? summary.drafted : summary.prepared).push(label);
     } catch (e) {
       summary.errors.push(`${label}: ${e instanceof Error ? e.message : String(e)}`);
     }
