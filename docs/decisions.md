@@ -29,6 +29,9 @@ A running log of decisions and the reasoning behind them. Newest at the bottom.
 | 2026-10-23 | **Work preferences are per user, in free text** | The owner's "remote, then on-site in Qatar" rule used to be built into the scoring prompt. Now each user writes their own, and the owner's existing profile was given theirs by migration `0004`. |
 | 2026-10-28 | **Block reposting sites such as JobLeads in JSearch results** | They copy listings from elsewhere, are often out of date, and put a sign-up or paywall in front of the employer. The employer's own link, or LinkedIn or Indeed, is picked from the job's other apply options instead, and a job only they carry is dropped. |
 | 2026-10-28 | **Add Himalayas and Jobicy** | Both are free, need no key, and carry employer-posted remote jobs. Himalayas lists which countries can apply, which suits remote work from Qatar. Adzuna has no Qatar or Philippines coverage, and Jooble is itself a reposting aggregator with a partner key, so they were left out. |
+| 2026-10-28 | **No web scraping; widen coverage with alert emails and employer job-board APIs instead** | LinkedIn, Indeed and OnlineJobs.ph forbid automated access, and scraping from Vercel is blocked by bot protection and needs a headless browser that's heavy to run there. Job-alert emails reach the same listings within the rules, and Greenhouse, Lever and Ashby publish job boards as public APIs meant for this. |
+| 2026-10-28 | **Cache source fetches for an hour, shared by all users** | The cron runs every user in one call. Without a cache each feed was fetched once per user, which breaks Jobicy's once-an-hour ask and spends JSearch quota twice on shared searches. |
+| 2026-10-28 | **Skip the same job seen on another board, and listings over 30 days old** | The same job often arrives from Remotive, Himalayas and LinkedIn under different URLs, and each copy cost a Claude call and cluttered Openings. Old listings are usually filled. |
 
 ## Planned
 
