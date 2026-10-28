@@ -26,7 +26,7 @@ Copy `.env.example` to `.env.local` for local development. Add the same values t
 ## Local setup
 
 1. Create a Supabase project.
-2. Run the files in `supabase/migrations/` in order (`0001` to `0005`) in the SQL Editor.
+2. Run the files in `supabase/migrations/` in order (`0001` to `0006`) in the SQL Editor.
 3. In Supabase → Authentication → URL Configuration, add `http://localhost:3000/auth/callback` to the redirect URLs.
 4. Fill in `.env.local`, then run `npm install` and `npm run dev`.
 5. Sign in, paste your CV in **Settings**, and press **Find jobs now** on **Openings**.
@@ -72,5 +72,9 @@ GitHub Actions (`.github/workflows/ci.yml`) runs all four on every PR and on eve
 | "Could not find the 'work_preferences' column" or similar | Run `0004_friends.sql`. |
 | "Could not find the 'draft_saved_at' column" | Run `0005_gmail_drafts.sql`. |
 | Drafts don't appear in Gmail | Check IMAP is enabled in Gmail → Settings → Forwarding and POP/IMAP. The error under Apply to selected says what Gmail answered. |
+| "Could not find the 'career_boards' column" | Run `0006_more_sources.sql`. |
+| `Career page lever/acme: responded 404 (check the link in Settings)` | The company moved boards or the link is wrong. Open their Careers page and copy the link again. |
+| `Job alert emails are on, but no Gmail account is set up in Settings` | Add the Gmail address and app password in Settings, or untick **Read job-alert emails**. |
+| No jobs from alert emails | Set up job alerts on LinkedIn, Indeed, OnlineJobs.ph or Bayt for the same Gmail address. Only emails from the last two days are read. If a site changed its sender address, add it to `ALERT_SITES` in `src/lib/jobs/sources/alerts.ts`. |
 | `CREDENTIALS_KEY is not set` when saving Settings | Add the key (see above) and restart or redeploy. |
 | Gmail says `Invalid login` | Use an app password, not your Google password, and turn on 2-Step Verification first. |

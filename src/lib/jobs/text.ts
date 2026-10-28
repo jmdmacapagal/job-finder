@@ -69,3 +69,13 @@ export function jobKey(company: string, title: string): string {
   const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   return `${clean(clean(company).replace(COMPANY_SUFFIX, ""))}|${clean(title.replace(TITLE_TAIL, ""))}`;
 }
+
+/** Undoes HTML escaping, for feeds that send their HTML as escaped text (Greenhouse, RSS). */
+export function decodeEntities(text: string): string {
+  return text
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&amp;/gi, "&");
+}

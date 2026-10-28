@@ -21,11 +21,16 @@ Code: `src/lib/jobs/run.ts` (`runJobSearch`).
 | RemoteOK | `sources/remoteok.ts` | About 100 latest remote jobs | One call per run. The first array item is a legal notice and is skipped. Free. |
 | Jobicy | `sources/jobicy.ts` | Up to 100 remote engineering jobs | One call per run. A curated remote board; the link goes to the Jobicy job page, as its terms ask. Free, no key. |
 | Himalayas | `sources/himalayas.ts` | Up to 20 remote jobs per saved search | Employer-posted remote jobs that list which countries may apply. Location words are moved out of the search: a search naming Qatar, the Philippines or the UAE sets `country`, any other sets `worldwide=true`. Free; `HIMALAYAS_API_KEY` is optional and raises the rate limit. Openings credits it with a link to himalayas.app, as its terms ask. |
+| We Work Remotely | `sources/weworkremotely.ts` | Full-stack, front-end and back-end RSS feeds | Three calls per run. Titles arrive as "Company: Title" and are split. Free. |
+| Career pages | `sources/careers.ts` | Every open job at each company listed in Settings | Greenhouse (`boards-api.greenhouse.io`), Lever (`api.lever.co`) and Ashby (`api.ashbyhq.com`) publish each company's job board as public JSON for exactly this. One call per company. `parseCareerBoard()` turns the link the user pastes (`jobs.lever.co/acme`) into the API call. Lever and Ashby don't name the company, so it comes from the link. Free, no key. |
+| Job-alert emails | `sources/alerts.ts` | Jobs listed in alert emails from LinkedIn, Indeed, OnlineJobs.ph and Bayt | Only when **Read job-alert emails** is ticked in Settings. See below. |
 | JSearch | `sources/jsearch.ts` | 10 jobs per saved search | Google for Jobs, which covers LinkedIn, Indeed and company sites. Uses `GET /search-v2` on `jsearch.p.rapidapi.com`. Results arrive in `data.jobs`. Needs `JSEARCH_API_KEY`. |
 
 The sources are fetched in parallel with `Promise.allSettled`, so one failing source doesn't stop the others. Each fetch is cached in memory for an hour (`src/lib/jobs/cache.ts`), keyed by source and search, so the daily cron fetches each feed once for all users instead of once per user. That keeps to Jobicy's once-an-hour and Remotive's few-a-day asks and saves JSearch quota when friends share a search. Failed fetches aren't cached. A side effect: pressing **Find jobs now** twice within an hour may reuse the first fetch and find nothing new. Each failure appears as an orange line under the Find jobs now button.
 
 **JSearch apply links:** Google for Jobs also picks up reposting sites such as JobLeads, which copy listings, often stale, and ask you to sign up or pay before you reach the employer. `BLOCKED_PUBLISHERS` in `sources/jsearch.ts` lists them. They're sent to JSearch as `exclude_job_publishers`, and `pickApplyOption()` then chooses each job's link from `job_apply_link` and `apply_options`: the employer's own site (`is_direct`) first, then a trusted board or applicant tracking system (`TRUSTED_PUBLISHERS`, such as LinkedIn, Indeed, Bayt, Greenhouse or Lever), then any other link that isn't blocked. A job only blocked sites carry is dropped. The Openings "via" label names the publisher whose link was picked.
+
+**Job-alert emails:** these sites don't allow scraping but all email job alerts, so the app reads those instead. It signs in to the user's Gmail over IMAP with the same app password used for drafts, opens All Mail read-only, and searches `newer_than:2d from:(…)` for the senders in `ALERT_SITES`, taking the newest 15 emails. Each email's HTML becomes text with every link written as `text [url]`, and Claude (the scoring model, structured output) lists the jobs in it: title, company, location, link and a one-line summary. Links are kept only when they're HTTPS and on the alert's own site, with tracking parameters removed; LinkedIn and Indeed links are reduced to the job id so the same job matches across alerts. The listing's description is the summary plus a note that the full text is on the job page, and the scoring prompt is told not to mark such short listings down. The job pages themselves are never fetched. Nothing in Gmail is changed. Costs a cent or two a day.
 
 **JSearch country:** JSearch searches the US unless told otherwise. `countryFor()` sets `country=qa`, `ph` or `ae` when a search mentions Qatar/Doha, the Philippines/Manila/Cebu or the UAE/Dubai/Abu Dhabi.
 
@@ -63,7 +68,8 @@ Every scored job is upserted into `job_openings`, ignoring duplicates on `(user_
 | Claude (Haiku 5.5) | About $0.15 for 150 jobs | About 3,500 input tokens and a few hundred output tokens per job. Opus is roughly 30x the price. |
 | JSearch | 1 request per saved search | 7 searches × 30 days ≈ 210 requests a month. Check your RapidAPI plan's limit. |
 | Himalayas | 1 request per saved search | Free. Without a key, requests share a public allowance with every other caller. |
-| Remotive, RemoteOK, Jobicy | Free | |
+| Remotive, RemoteOK, Jobicy, We Work Remotely, career pages | Free | |
+| Job-alert extraction (Haiku) | About $0.02 for 15 emails | Only when alerts are on |
 | Function time | Up to 300 seconds | `maxDuration = 300` on the cron route and the Openings page |
 
 These are estimates. Check the Anthropic Console and the RapidAPI dashboard for real usage.
@@ -83,10 +89,8 @@ These are estimates. Check the Anthropic Console and the RapidAPI dashboard for 
 
 ## Sources we don't scrape
 
-| Site | Status | Why |
+| Site | How it's covered | Why not scrape |
 | --- | --- | --- |
-| LinkedIn, Indeed | Covered through JSearch (Google for Jobs) | Both forbid scraping, block cloud IPs such as Vercel's, and can ban the account used. |
-| Bayt, GulfTalent, Naukrigulf | Partly covered through JSearch with `country=qa` | No public API. Their listings show up in Google for Jobs. |
-| OnlineJobs.ph | Not covered | No API, and its terms (clause 7.4) forbid automated access. Job-alert emails are the allowed route. |
-
-Planned, low-risk ways to widen coverage: job-alert emails from LinkedIn, Indeed and OnlineJobs.ph read from Gmail, and the public job-board APIs of applicant tracking systems (Greenhouse, Lever, Ashby) for a list of companies the user picks.
+| LinkedIn, Indeed | JSearch (Google for Jobs) and job-alert emails | Both forbid scraping, block cloud IPs such as Vercel's, and can ban the account used. |
+| Bayt, GulfTalent, Naukrigulf | JSearch with `country=qa`; Bayt also through alert emails | No public API. Their listings show up in Google for Jobs. |
+| OnlineJobs.ph | Job-alert emails | No API, and its terms (clause 7.4) forbid automated access. |

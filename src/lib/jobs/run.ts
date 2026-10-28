@@ -1,13 +1,17 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mapWithConcurrency } from "@/lib/concurrency";
+import { gmailAccountFor } from "@/lib/apply/gmail";
 import { cached } from "./cache";
 import { scoreJob, type Candidate, type Fit } from "./score";
+import { fetchJobAlerts } from "./sources/alerts";
+import { fetchCareerBoard, parseCareerBoard } from "./sources/careers";
 import { fetchHimalayas } from "./sources/himalayas";
 import { fetchJobicy } from "./sources/jobicy";
 import { fetchJSearch } from "./sources/jsearch";
 import { fetchRemoteOk } from "./sources/remoteok";
 import { fetchRemotive } from "./sources/remotive";
+import { fetchWeWorkRemotely } from "./sources/weworkremotely";
 import { isRelevantTitle, jobKey } from "./text";
 import type { RawJob } from "./types";
 
@@ -29,18 +33,41 @@ export type RunSummary = {
   errors: string[];
 };
 
+export type SourceInput = {
+  queries: string[];
+  careerBoards: string[];
+  /** Reads the user's job-alert emails, or null when they haven't turned that on. */
+  alerts: (() => Promise<RawJob[]>) | null;
+};
+
 type Deps = {
   anthropic?: Anthropic;
-  fetchSources?: (queries: string[]) => Promise<{ jobs: RawJob[]; errors: string[] }>;
+  /** The signed-in user's email, so the owner's environment Gmail account can be used for job alerts. */
+  userEmail?: string | null;
+  fetchSources?: (input: SourceInput) => Promise<{ jobs: RawJob[]; errors: string[] }>;
   score?: (candidate: Candidate, job: RawJob) => Promise<Fit | null>;
 };
 
-export async function fetchAllSources(queries: string[]): Promise<{ jobs: RawJob[]; errors: string[] }> {
+export async function fetchAllSources({
+  queries,
+  careerBoards,
+  alerts,
+}: SourceInput): Promise<{ jobs: RawJob[]; errors: string[] }> {
   const jsearchKey = process.env.JSEARCH_API_KEY;
+  const boards = careerBoards.flatMap((link) => {
+    const board = parseCareerBoard(link);
+    return board ? [board] : [];
+  });
   const tasks: [string, Promise<RawJob[]>][] = [
     ["Remotive", cached("remotive", () => fetchRemotive())],
     ["RemoteOK", cached("remoteok", () => fetchRemoteOk())],
     ["Jobicy", cached("jobicy", () => fetchJobicy())],
+    ["We Work Remotely", cached("weworkremotely", () => fetchWeWorkRemotely())],
+    ...boards.map((b): [string, Promise<RawJob[]>] => [
+      `Career page ${b.ats}/${b.slug}`,
+      cached(`${b.ats}:${b.slug.toLowerCase()}`, () => fetchCareerBoard(b)),
+    ]),
+    ...(alerts ? [["Job alert emails", alerts()] as [string, Promise<RawJob[]>]] : []),
     ...queries.map((q): [string, Promise<RawJob[]>] => [
       `Himalayas "${q}"`,
       cached(`himalayas:${q.toLowerCase()}`, () => fetchHimalayas(q)),
@@ -99,7 +126,7 @@ export function selectCandidates(
 export async function runJobSearch(supabase: SupabaseClient, userId: string, deps: Deps = {}): Promise<RunSummary> {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("cv_markdown, search_queries, work_preferences")
+    .select("cv_markdown, search_queries, work_preferences, career_boards, read_job_alerts, gmail_address, gmail_app_password_encrypted")
     .eq("user_id", userId)
     .maybeSingle();
   if (profileError) throw new Error(profileError.message);
@@ -111,7 +138,25 @@ export async function runJobSearch(supabase: SupabaseClient, userId: string, dep
   const anthropic = deps.anthropic ?? new Anthropic();
   const score = deps.score ?? ((candidate: Candidate, job: RawJob) => scoreJob(anthropic, candidate, job));
   const candidate: Candidate = { cv: profile.cv_markdown, preferences: profile.work_preferences ?? "" };
-  const { jobs, errors } = await (deps.fetchSources ?? fetchAllSources)(profile.search_queries ?? []);
+  let alerts: SourceInput["alerts"] = null;
+  const alertErrors: string[] = [];
+  if (profile.read_job_alerts) {
+    try {
+      const account = gmailAccountFor(profile, deps.userEmail);
+      if (account) alerts = () => fetchJobAlerts(account, anthropic);
+      else alertErrors.push("Job alert emails are on, but no Gmail account is set up in Settings");
+    } catch (e) {
+      // A bad CREDENTIALS_KEY shouldn't stop the other sources.
+      alertErrors.push(`Job alert emails: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  const fetched = await (deps.fetchSources ?? fetchAllSources)({
+    queries: profile.search_queries ?? [],
+    careerBoards: profile.career_boards ?? [],
+    alerts,
+  });
+  const { jobs } = fetched;
+  const errors = [...alertErrors, ...fetched.errors];
 
   // Skip listings already saved or already applied to.
   const since = new Date(Date.now() - SAME_JOB_WINDOW_DAYS * 86_400_000).toISOString();

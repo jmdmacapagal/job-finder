@@ -33,6 +33,9 @@ A running log of decisions and the reasoning behind them. Newest at the bottom.
 | 2026-10-28 | **No web scraping; widen coverage with alert emails and employer job-board APIs instead** | LinkedIn, Indeed and OnlineJobs.ph forbid automated access, and scraping from Vercel is blocked by bot protection and needs a headless browser that's heavy to run there. Job-alert emails reach the same listings within the rules, and Greenhouse, Lever and Ashby publish job boards as public APIs meant for this. |
 | 2026-10-28 | **Cache source fetches for an hour, shared by all users** | The cron runs every user in one call. Without a cache each feed was fetched once per user, which breaks Jobicy's once-an-hour ask and spends JSearch quota twice on shared searches. |
 | 2026-10-28 | **Skip the same job seen on another board, and listings over 30 days old** | The same job often arrives from Remotive, Himalayas and LinkedIn under different URLs, and each copy cost a Claude call and cluttered Openings. Old listings are usually filled. |
+| 2026-10-28 | **Add company career pages through Greenhouse, Lever and Ashby** | They publish each company's job board as a public API meant to be read by other sites, so it's allowed and stable. The user lists the companies, which adds roles that never reach the job boards. |
+| 2026-10-28 | **Read job-alert emails from Gmail, opt-in and read-only** | The only allowed way to get OnlineJobs.ph jobs, and it adds LinkedIn and Indeed jobs that JSearch misses. It reuses the drafts app password, so there's nothing new to set up. It's off until the user ticks it, because it means reading their mail. Claude pulls the jobs out because every site's email layout differs, and only links to the alert's own site are kept. |
+| 2026-10-28 | **Add We Work Remotely** | A large remote board with official RSS feeds per category, free. |
 
 ## Planned
 
