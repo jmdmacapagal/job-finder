@@ -19,9 +19,9 @@ export async function GET(request: Request) {
   const invited = users.users.filter((u) => isAllowedEmail(u.email));
 
   const results = [];
-  for (const { id: user_id } of invited) {
+  for (const { id: user_id, email } of invited) {
     try {
-      results.push({ user_id, ...(await runJobSearch(supabase, user_id)) });
+      results.push({ user_id, ...(await runJobSearch(supabase, user_id, { userEmail: email })) });
     } catch (e) {
       results.push({ user_id, error: e instanceof Error ? e.message : String(e) });
     }

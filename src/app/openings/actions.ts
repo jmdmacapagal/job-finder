@@ -15,7 +15,7 @@ export async function findJobsNow(): Promise<FindState> {
   if (!user) return { error: "You're signed out." };
 
   try {
-    const summary = await runJobSearch(supabase, user.id);
+    const summary = await runJobSearch(supabase, user.id, { userEmail: user.email });
     revalidatePath("/openings");
     return { summary };
   } catch (e) {

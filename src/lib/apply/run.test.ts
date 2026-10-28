@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
-import type { SendEmail } from "./gmail";
+import { buildRawEmail, type SaveDraft, type SendEmail } from "./gmail";
 import { applyToSelected, attachmentName } from "./run";
 
 type Row = Record<string, unknown>;
@@ -55,11 +55,29 @@ const opening = (overrides: Row): Row => ({
 const tailor = vi.fn(async () => ({ subject: "Full Stack Engineer - JM", cover_email: "Hi", cv_markdown: "# JM\n- Vue" }));
 
 describe("applyToSelected", () => {
-  it("emails listings with an address and prepares the rest", async () => {
+  it("saves a Gmail draft for listings with an address and sends nothing", async () => {
+    const send = vi.fn<SendEmail>(async () => {});
+    const saveDraft = vi.fn<SaveDraft>(async () => {});
+    const db = fakeSupabase([opening({ id: "a", apply_email: "jobs@acme.test" }), opening({ id: "b", company: "Beta" })]);
+
+    const summary = await applyToSelected(db.client, "u1", { tailor, send, saveDraft, today: () => "2026-10-23" });
+
+    expect(summary.drafted).toEqual(["Full Stack Engineer at Acme"]);
+    expect(summary.emailed).toEqual([]);
+    expect(summary.prepared).toEqual(["Full Stack Engineer at Beta"]);
+    expect(send).not.toHaveBeenCalled();
+    expect(saveDraft).toHaveBeenCalledOnce();
+    expect(saveDraft.mock.calls[0][0]).toMatchObject({ to: "jobs@acme.test", subject: "Full Stack Engineer - JM" });
+    const drafted = db.inserted.find((r) => r.opening_id === "a")!;
+    expect(drafted).toMatchObject({ status: "saved", applied_on: null, sent_at: null });
+    expect(drafted.draft_saved_at).toEqual(expect.any(String));
+  });
+
+  it("emails listings with an address when sending is on, and prepares the rest", async () => {
     const send = vi.fn<SendEmail>(async () => {});
     const db = fakeSupabase([opening({ id: "a", apply_email: "jobs@acme.test" }), opening({ id: "b", company: "Beta" })]);
 
-    const summary = await applyToSelected(db.client, "u1", { tailor, send, today: () => "2026-10-23" });
+    const summary = await applyToSelected(db.client, "u1", { tailor, send, sendEmails: true, today: () => "2026-10-23" });
 
     expect(summary.emailed).toEqual(["Full Stack Engineer at Acme"]);
     expect(summary.prepared).toEqual(["Full Stack Engineer at Beta"]);
@@ -83,6 +101,21 @@ describe("applyToSelected", () => {
     expect(summary.errors[0]).toMatch(/haven't added your Gmail/);
     expect(db.inserted).toEqual([]);
     expect(db.updated).toEqual([]);
+  });
+});
+
+describe("buildRawEmail", () => {
+  it("builds an email with the recipient, subject and PDF attached", async () => {
+    const raw = (
+      await buildRawEmail(
+        { user: "jm@gmail.test", pass: "x", fromName: "JM Macapagal" },
+        { to: "jobs@acme.test", subject: "Engineer - JM", text: "Hi", attachment: { filename: "JM CV.pdf", content: new Uint8Array([37, 80, 68, 70]) } },
+      )
+    ).toString();
+    expect(raw).toMatch(/^To: jobs@acme\.test\r$/m);
+    expect(raw).toMatch(/^Subject: Engineer - JM\r$/m);
+    expect(raw).toMatch(/^From: "?JM Macapagal"? <jm@gmail\.test>\r$/m);
+    expect(raw).toMatch(/Content-Type: application\/pdf; name="JM CV\.pdf"/);
   });
 });
 

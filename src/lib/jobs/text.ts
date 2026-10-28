@@ -51,8 +51,31 @@ export function normalizeEmploymentType(value: string | null | undefined): Emplo
 
 // Cheap title filter so we only spend Claude calls on plausible roles.
 const RELEVANT_TITLE =
-  /full[\s-]?stack|front[\s-]?end|back[\s-]?end|software (engineer|developer)|web (developer|engineer)|react|vue|nuxt|next\.?js|node|typescript|javascript/i;
+  /full[\s-]?stack|front[\s-]?end|back[\s-]?end|software (engineer|developer)|web (developer|engineer)|(product|ui|application|applications|platform) (engineer|developer)|react|vue|nuxt|next\.?js|node|typescript|javascript/i;
 
 export function isRelevantTitle(title: string): boolean {
   return RELEVANT_TITLE.test(title);
+}
+
+const COMPANY_SUFFIX = /\b(inc|llc|ltd|limited|gmbh|corp|corporation|co|plc|pte|bv|sa|wll)\b/g;
+// "(Remote)", "- Remote, EMEA" and similar tails say where, not what, so the same job matches across boards.
+const TITLE_TAIL = /\s*(\(.*?\)|\[.*?\]|\s[-–|]\s.*?\b(remote|hybrid|on-?site|anywhere|worldwide)\b.*)$/i;
+
+/**
+ * Company plus title, lowercased with punctuation, company suffixes and location tails removed.
+ * The same job listed on several boards has different URLs but the same key.
+ */
+export function jobKey(company: string, title: string): string {
+  const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return `${clean(clean(company).replace(COMPANY_SUFFIX, ""))}|${clean(title.replace(TITLE_TAIL, ""))}`;
+}
+
+/** Undoes HTML escaping, for feeds that send their HTML as escaped text (Greenhouse, RSS). */
+export function decodeEntities(text: string): string {
+  return text
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&amp;/gi, "&");
 }

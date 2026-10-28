@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Pagination } from "@/components/Pagination";
 import { extractSalary, extractTechStack } from "@/lib/jobs/listing";
+import { sendingEnabled } from "@/lib/apply/run";
 import { MIN_FIT_SCORE } from "@/lib/jobs/run";
 import { pageRange, parsePage, totalPages } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
@@ -116,7 +117,7 @@ export default async function OpeningsPage({
         ) : (
           <div className="space-y-2">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <ApplyButton />
+              <ApplyButton sending={sendingEnabled()} />
               <SelectAllCheckbox />
             </div>
             <ul className="space-y-2">

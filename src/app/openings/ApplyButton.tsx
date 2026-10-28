@@ -5,7 +5,8 @@ import { useActionState } from "react";
 import { applySelected, type ApplyState } from "./actions";
 import { useSelectionCounts } from "./Selection";
 
-export function ApplyButton() {
+/** `sending` is APPLY_SEND_EMAILS; when off, email applications become Gmail drafts. */
+export function ApplyButton({ sending }: { sending: boolean }) {
   const { selected, byEmail } = useSelectionCounts();
   const [state, action, pending] = useActionState<ApplyState>(applySelected, null);
   const onSite = selected - byEmail;
@@ -19,7 +20,10 @@ export function ApplyButton() {
       </form>
       {selected > 0 && !pending && !state && (
         <p className="text-xs text-muted">
-          {byEmail > 0 && `${byEmail} will be emailed from your Gmail with a tailored CV. `}
+          {byEmail > 0 &&
+            (sending
+              ? `${byEmail} will be emailed from your Gmail with a tailored CV. `
+              : `${byEmail} will be saved as Gmail drafts with a tailored CV for you to review. Nothing is sent. `)}
           {onSite > 0 && `${onSite} apply on the company site, so you'll get a tailored CV to upload.`}
         </p>
       )}
@@ -27,8 +31,15 @@ export function ApplyButton() {
       {state?.summary && (
         <div className="space-y-1 text-sm text-muted">
           <p>
-            Emailed {state.summary.emailed.length} and prepared {state.summary.prepared.length} for the company
-            site.{" "}
+            {[
+              state.summary.emailed.length > 0 && `Emailed ${state.summary.emailed.length}`,
+              state.summary.drafted.length > 0 && `Saved ${state.summary.drafted.length} as Gmail drafts`,
+              `prepared ${state.summary.prepared.length} for the company site`,
+            ]
+              .filter(Boolean)
+              .join(", ")
+              .replace(/^p/, "P")}
+            .{" "}
             <Link href="/" className="text-accent">
               See applications
             </Link>

@@ -29,7 +29,8 @@ Jobs you've applied to (or saved to apply to). Created in `0001_init.sql`.
 | `contact_email` | text | Where the application was emailed, if anywhere |
 | `email_subject`, `cover_email` | text | The email Claude wrote |
 | `tailored_cv` | text | The tailored CV in Markdown; rendered to PDF on demand |
-| `sent_at` | timestamptz | When Gmail sent it; empty for site-only applications |
+| `sent_at` | timestamptz | When Gmail sent it, or when you pressed Mark as sent on a draft; empty otherwise |
+| `draft_saved_at` | timestamptz | When the email was saved to your Gmail Drafts (`0005_gmail_drafts.sql`); a draft with no `sent_at` shows **Draft in Gmail** |
 | `created_at`, `updated_at` | timestamptz | `updated_at` is set by a trigger |
 
 ## `job_openings`
@@ -57,13 +58,15 @@ Every listing the agent has scored. Created in `0001`, extended in `0002` and `0
 
 ## `profiles`
 
-One row per user with the agent's inputs. Created in `0002_job_agent.sql`, extended in `0004_friends.sql`.
+One row per user with the agent's inputs. Created in `0002_job_agent.sql`, extended in `0004_friends.sql` and `0006_more_sources.sql`.
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | `user_id` | uuid | Primary key; RLS key |
 | `cv_markdown` | text | The master CV the agent scores against |
 | `search_queries` | text[] | JSearch searches; a city or country in the text switches JSearch's country |
+| `career_boards` | text[] | Greenhouse, Lever or Ashby career page links, one per company |
+| `read_job_alerts` | boolean | Off by default. When on, job-alert emails in the user's Gmail are read each run. |
 | `work_preferences` | text | Free text, such as "remote first, on-site only in Manila". Fed to fit scoring. |
 | `gmail_address` | text | The Gmail applications are sent from |
 | `gmail_app_password_encrypted` | text | AES-256-GCM with `CREDENTIALS_KEY` (`src/lib/crypto.ts`). Never sent to the browser. |

@@ -7,12 +7,16 @@ export function SettingsForm({
   cv,
   queries,
   preferences,
+  careerBoards,
+  readJobAlerts,
   gmailAddress,
   hasGmailPassword,
 }: {
   cv: string;
   queries: string[];
   preferences: string;
+  careerBoards: string[];
+  readJobAlerts: boolean;
   gmailAddress: string;
   hasGmailPassword: boolean;
 }) {
@@ -53,9 +57,24 @@ export function SettingsForm({
           className="input"
         />
       </label>
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium">Company career pages</span>
+        <span className="mb-2 block text-xs text-muted">
+          One link per line, for companies you&apos;d like to work at that list jobs on Greenhouse, Lever or Ashby. Open a
+          company&apos;s Careers page and copy the link if it starts with boards.greenhouse.io, job-boards.greenhouse.io,
+          jobs.lever.co or jobs.ashbyhq.com.
+        </span>
+        <textarea
+          name="career_boards"
+          rows={4}
+          defaultValue={careerBoards.join("\n")}
+          placeholder={"https://jobs.lever.co/acme\nhttps://job-boards.greenhouse.io/example\nhttps://jobs.ashbyhq.com/startup"}
+          className="input"
+        />
+      </label>
 
       <fieldset className="card space-y-3 p-4">
-        <legend className="px-1 text-sm font-medium">Sending applications</legend>
+        <legend className="px-1 text-sm font-medium">Gmail</legend>
         <p className="text-xs text-muted">
           Applications are emailed from your own Gmail, and you get a copy of each one. Create an app password at{" "}
           <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-accent">
@@ -85,6 +104,16 @@ export function SettingsForm({
           />
         </label>
         <p className="text-xs text-muted">To stop sending from Gmail, clear the address and save.</p>
+        <label className="flex items-start gap-2">
+          <input name="read_job_alerts" type="checkbox" defaultChecked={readJobAlerts} className="mt-0.5" />
+          <span className="text-xs">
+            <span className="block font-medium">Read job-alert emails</span>
+            <span className="text-muted">
+              Finds jobs in alert emails from LinkedIn, Indeed, OnlineJobs.ph and Bayt from the last two days. Set up job
+              alerts on those sites first. Read-only: nothing in Gmail is changed.
+            </span>
+          </span>
+        </label>
       </fieldset>
 
       {state && <p className={`text-sm ${state.ok ? "text-green-600" : "text-red-600"}`}>{state.message}</p>}

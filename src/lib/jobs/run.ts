@@ -1,13 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mapWithConcurrency } from "@/lib/concurrency";
+import { gmailAccountFor } from "@/lib/apply/gmail";
+import { cached } from "./cache";
 import { scoreJob, type Candidate, type Fit } from "./score";
+import { fetchJobAlerts } from "./sources/alerts";
+import { fetchCareerBoard, parseCareerBoard } from "./sources/careers";
 import { fetchHimalayas } from "./sources/himalayas";
 import { fetchJobicy } from "./sources/jobicy";
 import { fetchJSearch } from "./sources/jsearch";
 import { fetchRemoteOk } from "./sources/remoteok";
 import { fetchRemotive } from "./sources/remotive";
-import { isRelevantTitle } from "./text";
+import { fetchWeWorkRemotely } from "./sources/weworkremotely";
+import { isRelevantTitle, jobKey } from "./text";
 import type { RawJob } from "./types";
 
 // Caps per run keep Claude spend and function time predictable.
@@ -15,6 +20,10 @@ const MAX_SCORED_PER_RUN = 150;
 const SCORE_CONCURRENCY = 10;
 // Listings scoring below this are saved (so they're never re-scored) but hidden from Openings.
 export const MIN_FIT_SCORE = 40;
+// Older listings are usually filled already. Jobs with no date are kept.
+const MAX_AGE_DAYS = 30;
+// A saved job hides a same-company, same-title listing from another board for this long.
+const SAME_JOB_WINDOW_DAYS = 30;
 
 export type RunSummary = {
   fetched: number;
@@ -24,21 +33,50 @@ export type RunSummary = {
   errors: string[];
 };
 
+export type SourceInput = {
+  queries: string[];
+  careerBoards: string[];
+  /** Reads the user's job-alert emails, or null when they haven't turned that on. */
+  alerts: (() => Promise<RawJob[]>) | null;
+};
+
 type Deps = {
   anthropic?: Anthropic;
-  fetchSources?: (queries: string[]) => Promise<{ jobs: RawJob[]; errors: string[] }>;
+  /** The signed-in user's email, so the owner's environment Gmail account can be used for job alerts. */
+  userEmail?: string | null;
+  fetchSources?: (input: SourceInput) => Promise<{ jobs: RawJob[]; errors: string[] }>;
   score?: (candidate: Candidate, job: RawJob) => Promise<Fit | null>;
 };
 
-export async function fetchAllSources(queries: string[]): Promise<{ jobs: RawJob[]; errors: string[] }> {
+export async function fetchAllSources({
+  queries,
+  careerBoards,
+  alerts,
+}: SourceInput): Promise<{ jobs: RawJob[]; errors: string[] }> {
   const jsearchKey = process.env.JSEARCH_API_KEY;
+  const boards = careerBoards.flatMap((link) => {
+    const board = parseCareerBoard(link);
+    return board ? [board] : [];
+  });
   const tasks: [string, Promise<RawJob[]>][] = [
-    ["Remotive", fetchRemotive()],
-    ["RemoteOK", fetchRemoteOk()],
-    ["Jobicy", fetchJobicy()],
-    ...queries.map((q): [string, Promise<RawJob[]>] => [`Himalayas "${q}"`, fetchHimalayas(q)]),
+    ["Remotive", cached("remotive", () => fetchRemotive())],
+    ["RemoteOK", cached("remoteok", () => fetchRemoteOk())],
+    ["Jobicy", cached("jobicy", () => fetchJobicy())],
+    ["We Work Remotely", cached("weworkremotely", () => fetchWeWorkRemotely())],
+    ...boards.map((b): [string, Promise<RawJob[]>] => [
+      `Career page ${b.ats}/${b.slug}`,
+      cached(`${b.ats}:${b.slug.toLowerCase()}`, () => fetchCareerBoard(b)),
+    ]),
+    ...(alerts ? [["Job alert emails", alerts()] as [string, Promise<RawJob[]>]] : []),
+    ...queries.map((q): [string, Promise<RawJob[]>] => [
+      `Himalayas "${q}"`,
+      cached(`himalayas:${q.toLowerCase()}`, () => fetchHimalayas(q)),
+    ]),
     ...(jsearchKey
-      ? queries.map((q): [string, Promise<RawJob[]>] => [`JSearch "${q}"`, fetchJSearch(q, jsearchKey)])
+      ? queries.map((q): [string, Promise<RawJob[]>] => [
+          `JSearch "${q}"`,
+          cached(`jsearch:${q.toLowerCase()}`, () => fetchJSearch(q, jsearchKey)),
+        ])
       : []),
   ];
 
@@ -52,13 +90,33 @@ export async function fetchAllSources(queries: string[]): Promise<{ jobs: RawJob
   return { jobs, errors };
 }
 
-/** Removes duplicates by URL and drops titles that clearly aren't relevant. */
-export function selectCandidates(jobs: RawJob[], knownUrls: Set<string>): RawJob[] {
-  const seen = new Set(knownUrls);
+/** A key for spotting the same job on another board, or null when the company is unknown. */
+function sameJobKey(company: string | null | undefined, title: string | null | undefined): string | null {
+  if (!company || !title || /^unknown$/i.test(company.trim())) return null;
+  return jobKey(company, title);
+}
+
+/**
+ * Removes jobs already seen (by URL, or by company and title from another board),
+ * stale listings, and titles that clearly aren't relevant.
+ */
+export function selectCandidates(
+  jobs: RawJob[],
+  knownUrls: Set<string>,
+  knownKeys: Set<string> = new Set(),
+  now = new Date(),
+): RawJob[] {
+  const seenUrls = new Set(knownUrls);
+  const seenKeys = new Set(knownKeys);
+  const oldest = now.getTime() - MAX_AGE_DAYS * 86_400_000;
   const out: RawJob[] = [];
   for (const job of jobs) {
-    if (seen.has(job.url) || !isRelevantTitle(job.title)) continue;
-    seen.add(job.url);
+    if (seenUrls.has(job.url) || !isRelevantTitle(job.title)) continue;
+    if (job.postedAt && new Date(job.postedAt).getTime() < oldest) continue;
+    const key = sameJobKey(job.company, job.title);
+    if (key && seenKeys.has(key)) continue;
+    seenUrls.add(job.url);
+    if (key) seenKeys.add(key);
     out.push(job);
   }
   // Newest first, so the cap keeps the freshest listings.
@@ -68,7 +126,7 @@ export function selectCandidates(jobs: RawJob[], knownUrls: Set<string>): RawJob
 export async function runJobSearch(supabase: SupabaseClient, userId: string, deps: Deps = {}): Promise<RunSummary> {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("cv_markdown, search_queries, work_preferences")
+    .select("cv_markdown, search_queries, work_preferences, career_boards, read_job_alerts, gmail_address, gmail_app_password_encrypted")
     .eq("user_id", userId)
     .maybeSingle();
   if (profileError) throw new Error(profileError.message);
@@ -80,16 +138,44 @@ export async function runJobSearch(supabase: SupabaseClient, userId: string, dep
   const anthropic = deps.anthropic ?? new Anthropic();
   const score = deps.score ?? ((candidate: Candidate, job: RawJob) => scoreJob(anthropic, candidate, job));
   const candidate: Candidate = { cv: profile.cv_markdown, preferences: profile.work_preferences ?? "" };
-  const { jobs, errors } = await (deps.fetchSources ?? fetchAllSources)(profile.search_queries ?? []);
+  let alerts: SourceInput["alerts"] = null;
+  const alertErrors: string[] = [];
+  if (profile.read_job_alerts) {
+    try {
+      const account = gmailAccountFor(profile, deps.userEmail);
+      if (account) alerts = () => fetchJobAlerts(account, anthropic);
+      else alertErrors.push("Job alert emails are on, but no Gmail account is set up in Settings");
+    } catch (e) {
+      // A bad CREDENTIALS_KEY shouldn't stop the other sources.
+      alertErrors.push(`Job alert emails: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  const fetched = await (deps.fetchSources ?? fetchAllSources)({
+    queries: profile.search_queries ?? [],
+    careerBoards: profile.career_boards ?? [],
+    alerts,
+  });
+  const { jobs } = fetched;
+  const errors = [...alertErrors, ...fetched.errors];
 
   // Skip listings already saved or already applied to.
+  const since = new Date(Date.now() - SAME_JOB_WINDOW_DAYS * 86_400_000).toISOString();
   const [{ data: openings }, { data: applications }] = await Promise.all([
-    supabase.from("job_openings").select("url").eq("user_id", userId),
-    supabase.from("applications").select("url").eq("user_id", userId).not("url", "is", null),
+    supabase.from("job_openings").select("url, company, title, discovered_at").eq("user_id", userId),
+    supabase.from("applications").select("url, company, role").eq("user_id", userId),
   ]);
-  const known = new Set([...(openings ?? []), ...(applications ?? [])].map((r) => r.url as string));
+  const knownUrls = new Set(
+    [...(openings ?? []), ...(applications ?? [])].map((r) => r.url as string | null).filter((u): u is string => !!u),
+  );
+  // Recent openings and every application, so a job applied to never comes back from another board.
+  const knownKeys = new Set(
+    [
+      ...(openings ?? []).filter((o) => o.discovered_at >= since).map((o) => sameJobKey(o.company, o.title)),
+      ...(applications ?? []).map((a) => sameJobKey(a.company, a.role)),
+    ].filter((k): k is string => !!k),
+  );
 
-  const candidates = selectCandidates(jobs, known).slice(0, MAX_SCORED_PER_RUN);
+  const candidates = selectCandidates(jobs, knownUrls, knownKeys).slice(0, MAX_SCORED_PER_RUN);
   const fits = await mapWithConcurrency(candidates, SCORE_CONCURRENCY, async (job) => {
     try {
       return await score(candidate, job);

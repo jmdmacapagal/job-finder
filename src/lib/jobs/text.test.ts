@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractApplyEmail, inferWorkMode, isRelevantTitle, normalizeEmploymentType, stripHtml } from "./text";
+import { extractApplyEmail, inferWorkMode, isRelevantTitle, jobKey, normalizeEmploymentType, stripHtml } from "./text";
 
 describe("stripHtml", () => {
   it("removes tags, decodes entities and puts paragraphs on new lines", () => {
@@ -39,6 +39,16 @@ describe("isRelevantTitle", () => {
   it("keeps engineering roles and drops others", () => {
     expect(isRelevantTitle("Senior Full-Stack Engineer")).toBe(true);
     expect(isRelevantTitle("Vue.js Developer")).toBe(true);
+    expect(isRelevantTitle("Product Engineer")).toBe(true);
+    expect(isRelevantTitle("UI Developer")).toBe(true);
     expect(isRelevantTitle("Account Executive")).toBe(false);
+  });
+});
+
+describe("jobKey", () => {
+  it("matches the same job across boards", () => {
+    expect(jobKey("Acme, Inc.", "Senior Full-Stack Engineer (Remote)")).toBe("acme|senior full stack engineer");
+    expect(jobKey("ACME", "Senior Full Stack Engineer - Remote, LATAM")).toBe("acme|senior full stack engineer");
+    expect(jobKey("Acme", "Senior Vue Developer")).not.toBe(jobKey("Acme", "Junior Vue Developer"));
   });
 });
