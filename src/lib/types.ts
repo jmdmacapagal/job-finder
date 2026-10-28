@@ -37,6 +37,7 @@ export type Application = {
   cover_email: string | null;
   tailored_cv: string | null;
   sent_at: string | null;
+  draft_saved_at: string | null;
   created_at: string;
   updated_at: string;
 };

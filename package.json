@@ -15,6 +15,7 @@
     "@anthropic-ai/sdk": "^1.2.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
+    "imapflow": "2.3.0",
     "next": "15.5.28",
     "nodemailer": "^10.2.1",
     "pdf-lib": "^1.17.1",

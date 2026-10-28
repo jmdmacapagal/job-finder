@@ -21,11 +21,12 @@ Copy `.env.example` to `.env.local` for local development. Add the same values t
 | `GMAIL_USER`, `GMAIL_APP_PASSWORD` | No | Apply | The owner's Gmail from the environment, used only when their sign-in email matches `GMAIL_USER` and they haven't saved one in Settings |
 | `GMAIL_FROM_NAME` | No | Apply | Sender name for the environment account. Otherwise the name on the CV is used. |
 | `TAILOR_MODEL` | No | Apply | Defaults to `claude-opus-5-5`. `claude-sonnet-5-5` halves the cost. |
+| `APPLY_SEND_EMAILS` | No | Apply | Off by default, so email applications are saved as Gmail drafts. Set to `true` to send them directly. |
 
 ## Local setup
 
 1. Create a Supabase project.
-2. Run the files in `supabase/migrations/` in order (`0001` to `0004`) in the SQL Editor.
+2. Run the files in `supabase/migrations/` in order (`0001` to `0005`) in the SQL Editor.
 3. In Supabase → Authentication → URL Configuration, add `http://localhost:3000/auth/callback` to the redirect URLs.
 4. Fill in `.env.local`, then run `npm install` and `npm run dev`.
 5. Sign in, paste your CV in **Settings**, and press **Find jobs now** on **Openings**.
@@ -69,5 +70,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs all four on every PR and on eve
 | Sign-in link doesn't come back to the app | The callback URL is missing from Supabase's redirect URLs. |
 | "Could not find the 'applied_at' column" or similar | Run `0003_apply.sql`. |
 | "Could not find the 'work_preferences' column" or similar | Run `0004_friends.sql`. |
+| "Could not find the 'draft_saved_at' column" | Run `0005_gmail_drafts.sql`. |
+| Drafts don't appear in Gmail | Check IMAP is enabled in Gmail → Settings → Forwarding and POP/IMAP. The error under Apply to selected says what Gmail answered. |
 | `CREDENTIALS_KEY is not set` when saving Settings | Add the key (see above) and restart or redeploy. |
 | Gmail says `Invalid login` | Use an app password, not your Google password, and turn on 2-Step Verification first. |

@@ -79,7 +79,14 @@ export default async function DashboardPage({
                       {app.location && ` · ${app.location}`}
                     </p>
                   </div>
-                  <StatusBadge status={app.status} />
+                  <div className="flex items-center gap-2">
+                    {app.draft_saved_at && !app.sent_at && (
+                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                        Draft in Gmail
+                      </span>
+                    )}
+                    <StatusBadge status={app.status} />
+                  </div>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-x-4 text-xs text-muted">
                   {app.applied_on && <span>Applied {app.applied_on}</span>}
