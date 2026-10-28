@@ -2,6 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mapWithConcurrency } from "@/lib/concurrency";
 import { scoreJob, type Candidate, type Fit } from "./score";
+import { fetchHimalayas } from "./sources/himalayas";
+import { fetchJobicy } from "./sources/jobicy";
 import { fetchJSearch } from "./sources/jsearch";
 import { fetchRemoteOk } from "./sources/remoteok";
 import { fetchRemotive } from "./sources/remotive";
@@ -33,6 +35,8 @@ export async function fetchAllSources(queries: string[]): Promise<{ jobs: RawJob
   const tasks: [string, Promise<RawJob[]>][] = [
     ["Remotive", fetchRemotive()],
     ["RemoteOK", fetchRemoteOk()],
+    ["Jobicy", fetchJobicy()],
+    ...queries.map((q): [string, Promise<RawJob[]>] => [`Himalayas "${q}"`, fetchHimalayas(q)]),
     ...(jsearchKey
       ? queries.map((q): [string, Promise<RawJob[]>] => [`JSearch "${q}"`, fetchJSearch(q, jsearchKey)])
       : []),

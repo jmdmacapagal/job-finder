@@ -14,6 +14,7 @@ Copy `.env.example` to `.env.local` for local development. Add the same values t
 | `ANTHROPIC_MODEL` | No | Scoring | Defaults to `claude-haiku-5-5` |
 | `JSEARCH_API_KEY` | For LinkedIn, Indeed and Qatar jobs | JSearch | RapidAPI → JSearch → code snippet (`x-rapidapi-key`), or My Apps → Authorization |
 | `JSEARCH_HOST`, `JSEARCH_PATH` | No | JSearch | Only if RapidAPI changes them. Defaults: `jsearch.p.rapidapi.com`, `/search-v2` |
+| `HIMALAYAS_API_KEY` | No | Himalayas | himalayas.app → API. Free; raises the limit to 10,000 requests a day instead of the shared public allowance. |
 | `SUPABASE_SERVICE_ROLE_KEY` | For the cron job | Cron | Supabase → API Keys → secret key (or the legacy service_role key). **Never expose it.** |
 | `CRON_SECRET` | For the cron job | Cron | Any long random string |
 | `CREDENTIALS_KEY` | To apply by email | Settings, Apply | `openssl rand -base64 32`. Encrypts each user's Gmail app password. **Never expose it, and don't change it** or saved passwords stop working (users would re-enter them). |
@@ -59,7 +60,9 @@ GitHub Actions (`.github/workflows/ci.yml`) runs all four on every PR and on eve
 | --- | --- |
 | "Could not find the table 'public.applications' in the schema cache" | The migration hasn't been run. Run the SQL files, then `notify pgrst, 'reload schema';`. |
 | `JSearch responded 404: Endpoint '/search' does not exist` | JSearch renamed its endpoint. The app now uses `/search-v2`. If it changes again, set `JSEARCH_PATH`. |
-| `JSEARCH_API_KEY is not set` | Only Remotive and RemoteOK were searched. Add the key to get LinkedIn, Indeed and Qatar jobs. |
+| Openings from JobLeads or another reposting site saved before they were blocked | New runs skip them. To clear old ones, run `delete from job_openings where source ilike 'JobLeads%' and not selected;` in the Supabase SQL editor. |
+| `Himalayas responded 429` | The shared public allowance ran out. Add a free `HIMALAYAS_API_KEY`. |
+| `JSEARCH_API_KEY is not set` | Only Remotive, RemoteOK, Jobicy and Himalayas were searched. Add the key to get LinkedIn, Indeed and Qatar jobs. |
 | `ANTHROPIC_API_KEY is not set, so jobs can't be scored.` | Add the key and restart the dev server. |
 | "Add your CV in Settings before searching for jobs." | Paste your CV on the Settings page. |
 | Same results every run | Already-scored jobs are skipped by design, so new results depend on new listings. Add searches in Settings for more variety. |
