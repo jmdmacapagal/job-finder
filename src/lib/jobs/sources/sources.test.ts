@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { countryFor, parseJSearch } from "./jsearch";
+import { himalayasParams, parseHimalayas } from "./himalayas";
+import { parseJobicy } from "./jobicy";
+import { countryFor, isBlockedPublisher, parseJSearch } from "./jsearch";
 import { parseRemoteOk } from "./remoteok";
 import { parseRemotive } from "./remotive";
 
@@ -93,5 +95,138 @@ describe("countryFor", () => {
     expect(countryFor("full stack developer Doha Qatar")).toBe("qa");
     expect(countryFor("react developer Manila")).toBe("ph");
     expect(countryFor("full stack engineer")).toBeNull();
+  });
+});
+
+describe("parseJSearch apply links", () => {
+  it("skips blocked publishers and prefers the employer's own site", () => {
+    const [job] = parseJSearch({
+      data: {
+        jobs: [
+          {
+            job_id: "1",
+            job_title: "Vue Developer",
+            job_publisher: "JobLeads",
+            job_apply_link: "https://www.jobleads.com/job/1",
+            apply_options: [
+              { publisher: "Lensa", apply_link: "https://lensa.com/1" },
+              { publisher: "LinkedIn", apply_link: "https://linkedin.com/jobs/1" },
+              { publisher: "Acme Careers", apply_link: "https://acme.com/careers/1", is_direct: true },
+            ],
+          },
+        ],
+      },
+    });
+    expect(job).toMatchObject({ source: "Acme Careers (JSearch)", url: "https://acme.com/careers/1" });
+  });
+
+  it("falls back to a trusted board", () => {
+    const [job] = parseJSearch({
+      data: [
+        {
+          job_id: "2",
+          job_title: "React Developer",
+          job_publisher: "JobLeads",
+          job_apply_link: "https://www.jobleads.com/job/2",
+          apply_options: [
+            { publisher: "Some Board", apply_link: "https://someboard.example/2" },
+            { publisher: "Indeed", apply_link: "https://indeed.com/2" },
+          ],
+        },
+      ],
+    });
+    expect(job.url).toBe("https://indeed.com/2");
+  });
+
+  it("drops jobs that only blocked publishers carry", () => {
+    const jobs = parseJSearch({
+      data: [{ job_id: "3", job_title: "Node Developer", job_publisher: "JobLeads", job_apply_link: "https://www.jobleads.com/3" }],
+    });
+    expect(jobs).toEqual([]);
+  });
+});
+
+describe("isBlockedPublisher", () => {
+  it("ignores case and punctuation", () => {
+    expect(isBlockedPublisher("jobleads.com")).toBe(true);
+    expect(isBlockedPublisher("Talent.com")).toBe(true);
+    expect(isBlockedPublisher("LinkedIn")).toBe(false);
+    expect(isBlockedPublisher(null)).toBe(false);
+  });
+});
+
+describe("parseHimalayas", () => {
+  it("keeps the application link and lists the allowed countries", () => {
+    const [job] = parseHimalayas({
+      jobs: [
+        {
+          guid: "https://himalayas.app/companies/acme/jobs/vue-dev",
+          title: "Vue Developer",
+          companyName: "Acme",
+          applicationLink: "https://acme.com/apply",
+          locationRestrictions: ["Qatar", "Philippines"],
+          pubDate: 1761609600,
+          minSalary: 60000,
+          maxSalary: 90000,
+          currency: "USD",
+          employmentType: "Full Time",
+          description: "<p>Remote role</p>",
+        },
+        { title: "No link" },
+      ],
+    });
+    expect(job).toMatchObject({
+      source: "Himalayas",
+      url: "https://acme.com/apply",
+      location: "Qatar, Philippines",
+      workMode: "remote",
+      employmentType: "full_time",
+      salary: "USD 60k–90k/year",
+      postedAt: "2025-10-28T00:00:00.000Z",
+      description: "Remote role",
+    });
+  });
+});
+
+describe("himalayasParams", () => {
+  it("moves the location out of the keywords", () => {
+    expect(Object.fromEntries(himalayasParams("full stack developer Doha Qatar"))).toEqual({
+      q: "full stack developer",
+      sort: "recent",
+      country: "qa",
+    });
+    expect(Object.fromEntries(himalayasParams("remote react developer"))).toEqual({
+      q: "react developer",
+      sort: "recent",
+      worldwide: "true",
+    });
+  });
+});
+
+describe("parseJobicy", () => {
+  it("uses the Jobicy job URL and region", () => {
+    const [job] = parseJobicy({
+      jobs: [
+        {
+          id: 9,
+          url: "https://jobicy.com/jobs/9-vue-developer",
+          jobTitle: "Vue Developer",
+          companyName: "Beta",
+          jobType: ["Full-Time"],
+          jobGeo: "EMEA",
+          salaryMin: 50000,
+          salaryMax: 70000,
+          salaryCurrency: "USD",
+          salaryPeriod: "year",
+        },
+      ],
+    });
+    expect(job).toMatchObject({
+      externalId: "jobicy:9",
+      url: "https://jobicy.com/jobs/9-vue-developer",
+      location: "EMEA",
+      employmentType: "full_time",
+      salary: "USD 50000–70000/year",
+    });
   });
 });

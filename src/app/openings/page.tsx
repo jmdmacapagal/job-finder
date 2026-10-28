@@ -144,7 +144,14 @@ export default async function OpeningsPage({
                   <JobHighlights job={job} yourStack={yourStack} />
                   {job.fit_reason && <p className="mt-2 text-sm">{job.fit_reason}</p>}
                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-                    <span>via {job.source}</span>
+                    {job.source === "Himalayas" ? (
+                      // Himalayas' terms ask for a visible link back to them.
+                      <a href="https://himalayas.app" target="_blank" rel="noreferrer" className="hover:text-foreground">
+                        via Himalayas
+                      </a>
+                    ) : (
+                      <span>via {job.source}</span>
+                    )}
                     {job.employment_type && <span>{EMPLOYMENT_TYPE_LABELS[job.employment_type]}</span>}
                     {job.apply_email ? (
                       <span className="text-green-600">Can apply by email</span>
